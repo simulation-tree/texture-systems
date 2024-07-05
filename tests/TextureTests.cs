@@ -1,6 +1,7 @@
 ﻿using Data.Systems;
 using Simulation;
 using System;
+using System.Numerics;
 using Textures.Systems;
 using Unmanaged;
 using Unmanaged.Collections;
@@ -67,19 +68,53 @@ namespace Textures.Tests
             float hueThreshold = 3f; //compression
 
             //bottom left is yellow
-            Assert.That(texture.Evaluate(0f, 0f).Hue, Is.EqualTo(0.25f).Within(hueThreshold));
+            Assert.That(Hue(texture.Evaluate(0f, 0f)), Is.EqualTo(0.25f).Within(hueThreshold));
 
             //bottom right is blue
-            Assert.That(texture.Evaluate(1f, 0f).Hue, Is.EqualTo(0.6666f).Within(hueThreshold));
+            Assert.That(Hue(texture.Evaluate(1f, 0f)), Is.EqualTo(0.6666f).Within(hueThreshold));
 
             //top left is green
-            Assert.That(texture.Evaluate(0f, 1f).Hue, Is.EqualTo(0.3333f).Within(hueThreshold));
+            Assert.That(Hue(texture.Evaluate(0f, 1f)), Is.EqualTo(0.3333f).Within(hueThreshold));
 
             //top right is red
-            Assert.That(texture.Evaluate(1f, 1f).Hue, Is.EqualTo(0f).Within(hueThreshold));
+            Assert.That(Hue(texture.Evaluate(1f, 1f)), Is.EqualTo(0f).Within(hueThreshold));
 
             //center is cyan
-            Assert.That(texture.Evaluate(0.5f, 0.5f).Hue, Is.EqualTo(0.5f).Within(hueThreshold));
+            Assert.That(Hue(texture.Evaluate(0.5f, 0.5f)), Is.EqualTo(0.5f).Within(hueThreshold));
+
+            float Hue(Vector4 color)
+            {
+                float r = color.X;
+                float g = color.Y;
+                float b = color.Z;
+                float max = Math.Max(r, Math.Max(g, b));
+                float min = Math.Min(r, Math.Min(g, b));
+                float delta = max - min;
+                float hue = 0f;
+                if (delta != 0f)
+                {
+                    if (max == r)
+                    {
+                        hue = (g - b) / delta;
+                    }
+                    else if (max == g)
+                    {
+                        hue = 2f + (b - r) / delta;
+                    }
+                    else
+                    {
+                        hue = 4f + (r - g) / delta;
+                    }
+                }
+
+                hue /= 6f;
+                if (hue < 0f)
+                {
+                    hue += 1f;
+                }
+
+                return hue;
+            }
         }
 
         [Test]
