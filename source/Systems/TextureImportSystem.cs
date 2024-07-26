@@ -41,18 +41,18 @@ namespace Textures.Systems
         /// Updates the entity with the latest pixel data using the <see cref="byte"/>
         /// collection on it.
         /// </summary>
-        private void Update(EntityID entity)
+        private void Update(eint entity)
         {
-            if (!world.ContainsCollection<Pixel>(entity))
+            if (!world.ContainsList<Pixel>(entity))
             {
-                world.CreateCollection<Pixel>(entity);
+                world.CreateList<Pixel>(entity);
             }
 
-            UnmanagedList<Pixel> pixels = world.GetCollection<Pixel>(entity);
+            UnmanagedList<Pixel> pixels = world.GetList<Pixel>(entity);
             pixels.Clear();
 
             //update pixels collection
-            UnmanagedList<byte> bytes = world.GetCollection<byte>(entity);
+            UnmanagedList<byte> bytes = world.GetList<byte>(entity);
             using (Image<Rgba32> image = Image.Load<Rgba32>(bytes.AsSpan()))
             {
                 uint width = (uint)image.Width;
