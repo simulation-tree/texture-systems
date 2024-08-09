@@ -25,7 +25,7 @@ namespace Textures.Systems
 
         private void Update(TextureUpdate e)
         {
-            textureQuery.Fill();
+            textureQuery.Update();
             foreach (Query<IsTexture>.Result result in textureQuery)
             {
                 ref IsTexture texture = ref result.Component1;
