@@ -10,15 +10,18 @@ namespace Textures.Systems
     public class TextureImportSystem : SystemBase
     {
         private readonly Query<IsTexture> textureQuery;
+        private readonly UnmanagedDictionary<eint, uint> textureVersions;
 
         public TextureImportSystem(World world) : base(world)
         {
             textureQuery = new(world);
+            textureVersions = new();
             Subscribe<TextureUpdate>(Update);
         }
 
         public override void Dispose()
         {
+            textureVersions.Dispose();
             textureQuery.Dispose();
             base.Dispose();
         }
@@ -26,13 +29,18 @@ namespace Textures.Systems
         private void Update(TextureUpdate e)
         {
             textureQuery.Update();
-            foreach (Query<IsTexture>.Result result in textureQuery)
+            foreach (var r in textureQuery)
             {
-                ref IsTexture texture = ref result.Component1;
-                if (texture.changed)
+                ref IsTexture texture = ref r.Component1;
+                if (!textureVersions.TryGetValue(r.entity, out uint lastVersion))
                 {
-                    texture.changed = false;
-                    Update(result.entity);
+                    textureVersions.Add(r.entity, texture.version);
+                    Update(r.entity);
+                }
+                else if (texture.version != lastVersion)
+                {
+                    textureVersions[r.entity] = texture.version;
+                    Update(r.entity);
                 }
             }
         }
