@@ -58,7 +58,7 @@ namespace Textures.Tests
             using DataImportSystem dataImports = new(world);
             using TextureImportSystem textureImports = new(world);
 
-            Data.Data testTextureFile = new(world, "testTexture", texturePngData);
+            Data.DataSource testTextureFile = new(world, "testTexture", texturePngData);
             using Texture texture = new(world, "testTexture");
             Assert.That(texture.GetWidth(), Is.EqualTo(16));
             Assert.That(texture.GetHeight(), Is.EqualTo(9));

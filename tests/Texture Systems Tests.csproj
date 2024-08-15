@@ -26,7 +26,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\data-systems\source\Data Systems.csproj" />
-    <ProjectReference Include="..\..\data\Data.csproj" />
+    <ProjectReference Include="..\..\data\source\Data.csproj" />
     <ProjectReference Include="..\source\Texture Systems.csproj" />
   </ItemGroup>
 
