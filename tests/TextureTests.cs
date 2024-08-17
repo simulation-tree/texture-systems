@@ -27,9 +27,9 @@ namespace Textures.Tests
             }
 
             Texture emptyTexture = new(world, 4, 4, pixels);
-            Assert.That(emptyTexture.GetWidth(), Is.EqualTo(4));
-            Assert.That(emptyTexture.GetHeight(), Is.EqualTo(4));
-            Pixel[] pixelsArray = emptyTexture.GetPixels().ToArray();
+            Assert.That(emptyTexture.Width, Is.EqualTo(4));
+            Assert.That(emptyTexture.Height, Is.EqualTo(4));
+            Pixel[] pixelsArray = emptyTexture.Pixels.ToArray();
             Assert.That(pixelsArray.Length, Is.EqualTo(4 * 4));
             foreach (Pixel pixel in pixelsArray)
             {
@@ -60,9 +60,9 @@ namespace Textures.Tests
 
             Data.DataSource testTextureFile = new(world, "testTexture", texturePngData);
             using Texture texture = new(world, "testTexture");
-            Assert.That(texture.GetWidth(), Is.EqualTo(16));
-            Assert.That(texture.GetHeight(), Is.EqualTo(9));
-            Pixel[] pixels = texture.GetPixels().ToArray();
+            Assert.That(texture.Width, Is.EqualTo(16));
+            Assert.That(texture.Height, Is.EqualTo(9));
+            Pixel[] pixels = texture.Pixels.ToArray();
             Assert.That(pixels.Length, Is.EqualTo(16 * 9));
 
             float hueThreshold = 3f; //compression
@@ -151,9 +151,9 @@ namespace Textures.Tests
             sprites.Add(c);
             sprites.Add(d);
             using AtlasTexture atlas = new(world, sprites.AsSpan());
-            Assert.That(atlas.GetWidth(), Is.EqualTo(64));
-            Assert.That(atlas.GetHeight(), Is.EqualTo(64));
-            Assert.That(atlas.GetSprites().Length, Is.EqualTo(4));
+            Assert.That(atlas.Width, Is.EqualTo(64));
+            Assert.That(atlas.Height, Is.EqualTo(64));
+            Assert.That(atlas.Sprites.Length, Is.EqualTo(4));
         }
     }
 }
