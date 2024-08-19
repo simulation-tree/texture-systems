@@ -1,7 +1,11 @@
-﻿using Data.Systems;
+﻿using Data;
+using Data.Events;
+using Data.Systems;
 using Simulation;
 using System;
-using System.Numerics;
+using System.Threading;
+using System.Threading.Tasks;
+using Textures.Events;
 using Textures.Systems;
 using Unmanaged;
 using Unmanaged.Collections;
@@ -14,6 +18,13 @@ namespace Textures.Tests
         public void CleanUp()
         {
             Allocations.ThrowIfAny();
+        }
+
+        private void Simulate(World world)
+        {
+            world.Submit(new DataUpdate());
+            world.Submit(new TextureUpdate());
+            world.Poll();
         }
 
         [Test]
@@ -40,8 +51,8 @@ namespace Textures.Tests
             }
         }
 
-        [Test]
-        public void ImportTexture()
+        [Test, CancelAfter(1000)]
+        public async Task ImportTexture(CancellationToken cancellation)
         {
             byte[] texturePngData = [
                 137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,0,16,0,0,0,9,8,6,0,0,0,59,
@@ -57,64 +68,34 @@ namespace Textures.Tests
             using World world = new();
             using DataImportSystem dataImports = new(world);
             using TextureImportSystem textureImports = new(world);
+            Simulate(world);
 
-            Data.DataSource testTextureFile = new(world, "testTexture", texturePngData);
-            using Texture texture = new(world, "testTexture");
+            DataSource testTextureFile = new(world, "testTexture", texturePngData);
+            Texture texture = new(world, "testTexture");
+            Simulate(world);
+
+            await texture.UntilLoaded(cancellation);
+
             Assert.That(texture.Width, Is.EqualTo(16));
             Assert.That(texture.Height, Is.EqualTo(9));
-            Pixel[] pixels = texture.Pixels.ToArray();
-            Assert.That(pixels.Length, Is.EqualTo(16 * 9));
+            Assert.That(texture.Pixels.Length, Is.EqualTo(16 * 9));
 
             float hueThreshold = 3f; //compression
 
             //bottom left is yellow
-            Assert.That(Hue(texture.Evaluate(0f, 0f)), Is.EqualTo(0.25f).Within(hueThreshold));
+            Assert.That(texture.Evaluate(0f, 0f).H, Is.EqualTo(0.25f).Within(hueThreshold));
 
             //bottom right is blue
-            Assert.That(Hue(texture.Evaluate(1f, 0f)), Is.EqualTo(0.6666f).Within(hueThreshold));
+            Assert.That(texture.Evaluate(1f, 0f).H, Is.EqualTo(0.6666f).Within(hueThreshold));
 
             //top left is green
-            Assert.That(Hue(texture.Evaluate(0f, 1f)), Is.EqualTo(0.3333f).Within(hueThreshold));
+            Assert.That(texture.Evaluate(0f, 1f).H, Is.EqualTo(0.3333f).Within(hueThreshold));
 
             //top right is red
-            Assert.That(Hue(texture.Evaluate(1f, 1f)), Is.EqualTo(0f).Within(hueThreshold));
+            Assert.That(texture.Evaluate(1f, 1f).H, Is.EqualTo(0f).Within(hueThreshold));
 
             //center is cyan
-            Assert.That(Hue(texture.Evaluate(0.5f, 0.5f)), Is.EqualTo(0.5f).Within(hueThreshold));
-
-            float Hue(Vector4 color)
-            {
-                float r = color.X;
-                float g = color.Y;
-                float b = color.Z;
-                float max = Math.Max(r, Math.Max(g, b));
-                float min = Math.Min(r, Math.Min(g, b));
-                float delta = max - min;
-                float hue = 0f;
-                if (delta != 0f)
-                {
-                    if (max == r)
-                    {
-                        hue = (g - b) / delta;
-                    }
-                    else if (max == g)
-                    {
-                        hue = 2f + (b - r) / delta;
-                    }
-                    else
-                    {
-                        hue = 4f + (r - g) / delta;
-                    }
-                }
-
-                hue /= 6f;
-                if (hue < 0f)
-                {
-                    hue += 1f;
-                }
-
-                return hue;
-            }
+            Assert.That(texture.Evaluate(0.5f, 0.5f).H, Is.EqualTo(0.5f).Within(hueThreshold));
         }
 
         [Test]
