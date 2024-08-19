@@ -1,10 +1,8 @@
-﻿using Data.Components;
-using Simulation;
+﻿using Simulation;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Concurrent;
-using System.Threading;
 using Textures.Components;
 using Textures.Events;
 using Unmanaged.Collections;
@@ -50,7 +48,6 @@ namespace Textures.Systems
                 eint textureEntity = r.entity;
                 if (!textureVersions.ContainsKey(textureEntity))
                 {
-                    textureVersions.Add(textureEntity, default);
                     sourceChanged = true;
                 }
                 else
@@ -60,9 +57,11 @@ namespace Textures.Systems
 
                 if (sourceChanged)
                 {
-                    textureVersions[textureEntity] = request.version;
                     //ThreadPool.QueueUserWorkItem(LoadImageDataOntoEntity, textureEntity, false);
-                    LoadImageDataOntoEntity(textureEntity);
+                    if (TryLoadImageDataOntoEntity(textureEntity))
+                    {
+                        textureVersions[textureEntity] = request.version;
+                    }
                 }
             }
 
@@ -82,12 +81,11 @@ namespace Textures.Systems
         /// Updates the entity with the latest pixel data using the <see cref="byte"/>
         /// collection on it.
         /// </summary>
-        private void LoadImageDataOntoEntity(eint entity)
+        private bool TryLoadImageDataOntoEntity(eint entity)
         {
-            while (!world.ContainsList<byte>(entity))
+            if (!world.ContainsList<byte>(entity))
             {
-                Console.WriteLine("hanging textures");
-                Thread.Sleep(1);
+                return false;
             }
 
             //update pixels collection
@@ -135,6 +133,7 @@ namespace Textures.Systems
                 operation.AppendToList<Pixel>(pixels.AsSpan());
                 operations.Enqueue(operation);
                 Console.WriteLine($"Finished loading image data onto entity `{entity}`");
+                return true;
             }
         }
     }
