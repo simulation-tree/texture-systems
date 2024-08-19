@@ -16,7 +16,7 @@ namespace Textures.Systems
         private readonly Query<IsTextureRequest> textureRequestsQuery;
         private readonly Query<IsTexture> texturesQuery;
         private readonly UnmanagedDictionary<eint, uint> textureVersions;
-        private readonly ConcurrentQueue<UnmanagedArray<Instruction>> operations;
+        private readonly ConcurrentQueue<Operation> operations;
 
         public TextureImportSystem(World world) : base(world)
         {
@@ -29,13 +29,8 @@ namespace Textures.Systems
 
         public override void Dispose()
         {
-            while (operations.TryDequeue(out UnmanagedArray<Instruction> operation))
+            while (operations.TryDequeue(out Operation operation))
             {
-                foreach (Instruction instruction in operation)
-                {
-                    instruction.Dispose();
-                }
-
                 operation.Dispose();
             }
 
@@ -76,9 +71,8 @@ namespace Textures.Systems
 
         private void PerformInstructions()
         {
-            while (operations.TryDequeue(out UnmanagedArray<Instruction> operation))
+            while (operations.TryDequeue(out Operation operation))
             {
-                Console.WriteLine($"Performing operation with {operation.Length} instructions");
                 world.Perform(operation);
                 operation.Dispose();
             }
@@ -92,6 +86,7 @@ namespace Textures.Systems
         {
             while (!world.ContainsList<byte>(entity))
             {
+                Console.WriteLine("hanging textures");
                 Thread.Sleep(1);
             }
 
@@ -113,33 +108,32 @@ namespace Textures.Systems
                 }
 
                 //update texture size data
-                Span<Instruction> instructions = stackalloc Instruction[4];
-                int instructionCount = 0;
-                instructions[instructionCount++] = Instruction.SelectEntity(entity);
+                Operation operation = new();
+                operation.SelectEntity(entity);
                 if (world.TryGetComponent(entity, out IsTexture component))
                 {
                     component.width = width;
                     component.height = height;
                     component.version++;
-                    instructions[instructionCount++] = Instruction.SetComponent(component);
+                    operation.SetComponent(component);
                 }
                 else
                 {
-                    instructions[instructionCount++] = Instruction.AddComponent(new IsTexture(width, height));
+                    operation.AddComponent(new IsTexture(width, height));
                 }
 
                 //put list
                 if (!world.ContainsList<Pixel>(entity))
                 {
-                    instructions[instructionCount++] = Instruction.CreateList<Pixel>();
+                    operation.CreateList<Pixel>();
                 }
                 else
                 {
-                    instructions[instructionCount++] = Instruction.ClearList<Pixel>();
+                    operation.ClearList<Pixel>();
                 }
 
-                instructions[instructionCount++] = Instruction.AddElements<Pixel>(pixels.AsSpan());
-                operations.Enqueue(new(instructions[..instructionCount]));
+                operation.AppendToList<Pixel>(pixels.AsSpan());
+                operations.Enqueue(operation);
                 Console.WriteLine($"Finished loading image data onto entity `{entity}`");
             }
         }
