@@ -20,11 +20,12 @@ namespace Textures.Tests
             Allocations.ThrowIfAny();
         }
 
-        private void Simulate(World world)
+        private async Task Simulate(World world, CancellationToken cancellation)
         {
             world.Submit(new DataUpdate());
             world.Submit(new TextureUpdate());
             world.Poll();
+            await Task.Delay(1, cancellation).ConfigureAwait(false);
         }
 
         [Test]
@@ -68,13 +69,10 @@ namespace Textures.Tests
             using World world = new();
             using DataImportSystem dataImports = new(world);
             using TextureImportSystem textureImports = new(world);
-            Simulate(world);
-
             DataSource testTextureFile = new(world, "testTexture", texturePngData);
+            
             Texture texture = new(world, "testTexture");
-            Simulate(world);
-
-            await texture.UntilLoaded(cancellation);
+            await texture.UntilIs(Simulate, cancellation);
 
             Assert.That(texture.Width, Is.EqualTo(16));
             Assert.That(texture.Height, Is.EqualTo(9));
