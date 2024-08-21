@@ -98,7 +98,7 @@ namespace Textures.Tests
         public void CreateAtlasTextureFromSprites()
         {
             using World world = new();
-            using UnmanagedList<AtlasTexture.InputSprite> sprites = UnmanagedList<AtlasTexture.InputSprite>.Create();
+            Span<AtlasTexture.InputSprite> sprites = stackalloc AtlasTexture.InputSprite[4];
             AtlasTexture.InputSprite a = new("r", 32, 32);
             for (int i = 0; i < a.Pixels.Length; i++)
             {
@@ -123,11 +123,12 @@ namespace Textures.Tests
                 d.Pixels[i] = new(byte.MaxValue, byte.MaxValue, 0, 0);
             }
 
-            sprites.Add(a);
-            sprites.Add(b);
-            sprites.Add(c);
-            sprites.Add(d);
-            using AtlasTexture atlas = new(world, sprites.AsSpan());
+            sprites[0] = a;
+            sprites[1] = b;
+            sprites[2] = c;
+            sprites[3] = d;
+
+            AtlasTexture atlas = new(world, sprites);
             Assert.That(atlas.Width, Is.EqualTo(64));
             Assert.That(atlas.Height, Is.EqualTo(64));
             Assert.That(atlas.Sprites.Length, Is.EqualTo(4));
