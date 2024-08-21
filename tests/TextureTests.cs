@@ -20,14 +20,6 @@ namespace Textures.Tests
             Allocations.ThrowIfAny();
         }
 
-        private async Task Simulate(World world, CancellationToken cancellation)
-        {
-            world.Submit(new DataUpdate());
-            world.Submit(new TextureUpdate());
-            world.Poll();
-            await Task.Delay(1, cancellation).ConfigureAwait(false);
-        }
-
         [Test]
         public void CreateEmptyTexture()
         {
@@ -72,7 +64,13 @@ namespace Textures.Tests
             DataSource testTextureFile = new(world, "testTexture", texturePngData);
             
             Texture texture = new(world, "testTexture");
-            await texture.UntilIs(Simulate, cancellation);
+            await texture.UntilIs(async (world, cancellation) =>
+            {
+                world.Submit(new DataUpdate());
+                world.Submit(new TextureUpdate());
+                world.Poll();
+                await Task.Delay(1, cancellation).ConfigureAwait(false);
+            }, cancellation);
 
             Assert.That(texture.Width, Is.EqualTo(16));
             Assert.That(texture.Height, Is.EqualTo(9));
