@@ -60,7 +60,7 @@ namespace Textures.Systems
                     //ThreadPool.QueueUserWorkItem(LoadImageDataOntoEntity, textureEntity, false);
                     if (TryLoadImageDataOntoEntity(textureEntity))
                     {
-                        textureVersions[textureEntity] = request.version;
+                        textureVersions.AddOrSet(textureEntity, request.version);
                     }
                 }
             }
@@ -83,15 +83,15 @@ namespace Textures.Systems
         /// </summary>
         private bool TryLoadImageDataOntoEntity(eint entity)
         {
-            if (!world.ContainsList<byte>(entity))
+            if (!world.ContainsArray<byte>(entity))
             {
                 return false;
             }
 
             //update pixels collection
             Console.WriteLine($"Loading image data onto entity `{entity}`");
-            UnmanagedList<byte> bytes = world.GetList<byte>(entity);
-            using (Image<Rgba32> image = Image.Load<Rgba32>(bytes.AsSpan()))
+            Span<byte> bytes = world.GetArray<byte>(entity);
+            using (Image<Rgba32> image = Image.Load<Rgba32>(bytes))
             {
                 uint width = (uint)image.Width;
                 uint height = (uint)image.Height;
@@ -121,16 +121,16 @@ namespace Textures.Systems
                 }
 
                 //put list
-                if (!world.ContainsList<Pixel>(entity))
+                if (!world.ContainsArray<Pixel>(entity))
                 {
-                    operation.CreateList<Pixel>();
+                    operation.CreateArray<Pixel>(pixels.AsSpan());
                 }
                 else
                 {
-                    operation.ClearList<Pixel>();
+                    operation.ResizeArray<Pixel>(pixels.Length);
+                    operation.SetArrayElement(0, pixels.AsSpan());
                 }
 
-                operation.AppendToList<Pixel>(pixels.AsSpan());
                 operations.Enqueue(operation);
                 Console.WriteLine($"Finished loading image data onto entity `{entity}`");
                 return true;
