@@ -13,7 +13,7 @@ namespace Textures.Systems
     {
         private readonly Query<IsTextureRequest> textureRequestsQuery;
         private readonly Query<IsTexture> texturesQuery;
-        private readonly UnmanagedDictionary<eint, uint> textureVersions;
+        private readonly UnmanagedDictionary<uint, uint> textureVersions;
         private readonly ConcurrentQueue<Operation> operations;
 
         public TextureImportSystem(World world) : base(world)
@@ -45,7 +45,7 @@ namespace Textures.Systems
             {
                 IsTextureRequest request = r.Component1;
                 bool sourceChanged = false;
-                eint textureEntity = r.entity;
+                uint textureEntity = r.entity;
                 if (!textureVersions.ContainsKey(textureEntity))
                 {
                     sourceChanged = true;
@@ -81,7 +81,7 @@ namespace Textures.Systems
         /// Updates the entity with the latest pixel data using the <see cref="byte"/>
         /// collection on it.
         /// </summary>
-        private bool TryLoadImageDataOntoEntity(eint entity)
+        private bool TryLoadImageDataOntoEntity(uint entity)
         {
             if (!world.ContainsArray<byte>(entity))
             {
