@@ -5,21 +5,22 @@ using System;
 using System.Collections.Concurrent;
 using Textures.Components;
 using Textures.Events;
+using Unmanaged;
 using Unmanaged.Collections;
 
 namespace Textures.Systems
 {
     public class TextureImportSystem : SystemBase
     {
-        private readonly Query<IsTextureRequest> textureRequestsQuery;
-        private readonly Query<IsTexture> texturesQuery;
+        private readonly ComponentQuery<IsTextureRequest> textureRequestsQuery;
+        private readonly ComponentQuery<IsTexture> texturesQuery;
         private readonly UnmanagedDictionary<uint, uint> textureVersions;
         private readonly ConcurrentQueue<Operation> operations;
 
         public TextureImportSystem(World world) : base(world)
         {
-            textureRequestsQuery = new(world);
-            texturesQuery = new(world);
+            textureRequestsQuery = new();
+            texturesQuery = new();
             textureVersions = new();
             Subscribe<TextureUpdate>(Update);
             operations = new();
@@ -40,7 +41,7 @@ namespace Textures.Systems
 
         private void Update(TextureUpdate e)
         {
-            textureRequestsQuery.Update();
+            textureRequestsQuery.Update(world);
             foreach (var r in textureRequestsQuery)
             {
                 IsTextureRequest request = r.Component1;
@@ -90,8 +91,8 @@ namespace Textures.Systems
 
             //update pixels collection
             Console.WriteLine($"Loading image data onto entity `{entity}`");
-            Span<byte> bytes = world.GetArray<byte>(entity);
-            using (Image<Rgba32> image = Image.Load<Rgba32>(bytes))
+            USpan<byte> bytes = world.GetArray<byte>(entity);
+            using (Image<Rgba32> image = Image.Load<Rgba32>(bytes.AsSystemSpan()))
             {
                 uint width = (uint)image.Width;
                 uint height = (uint)image.Height;

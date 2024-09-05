@@ -24,8 +24,8 @@ namespace Textures.Tests
         public void CreateEmptyTexture()
         {
             using World world = new();
-            Span<Pixel> pixels = stackalloc Pixel[16];
-            for (int i = 0; i < pixels.Length; i++)
+            USpan<Pixel> pixels = stackalloc Pixel[16];
+            for (uint i = 0; i < pixels.length; i++)
             {
                 pixels[i] = new Pixel(byte.MaxValue, 0, 0, byte.MaxValue);
             }
@@ -64,7 +64,7 @@ namespace Textures.Tests
             DataSource testTextureFile = new(world, "testTexture", texturePngData);
             
             Texture texture = new(world, "testTexture");
-            await texture.UntilIs(async (world, cancellation) =>
+            await texture.UntilCompliant(async (world, cancellation) =>
             {
                 world.Submit(new DataUpdate());
                 world.Submit(new TextureUpdate());
@@ -74,7 +74,7 @@ namespace Textures.Tests
 
             Assert.That(texture.Width, Is.EqualTo(16));
             Assert.That(texture.Height, Is.EqualTo(9));
-            Assert.That(texture.Pixels.Length, Is.EqualTo(16 * 9));
+            Assert.That(texture.Pixels.length, Is.EqualTo(16 * 9));
 
             float hueThreshold = 3f; //compression
 
@@ -98,27 +98,27 @@ namespace Textures.Tests
         public void CreateAtlasTextureFromSprites()
         {
             using World world = new();
-            Span<AtlasTexture.InputSprite> sprites = stackalloc AtlasTexture.InputSprite[4];
+            USpan<AtlasTexture.InputSprite> sprites = stackalloc AtlasTexture.InputSprite[4];
             AtlasTexture.InputSprite a = new("r", 32, 32);
-            for (int i = 0; i < a.Pixels.Length; i++)
+            for (uint i = 0; i < a.Pixels.length; i++)
             {
                 a.Pixels[i] = new(byte.MaxValue, 0, 0, 0);
             }
 
             AtlasTexture.InputSprite b = new("g", 32, 32);
-            for (int i = 0; i < b.Pixels.Length; i++)
+            for (uint i = 0; i < b.Pixels.length; i++)
             {
                 b.Pixels[i] = new(0, byte.MaxValue, 0, 0);
             }
 
             AtlasTexture.InputSprite c = new("b", 32, 32);
-            for (int i = 0; i < c.Pixels.Length; i++)
+            for (uint i = 0; i < c.Pixels.length; i++)
             {
                 c.Pixels[i] = new(0, 0, byte.MaxValue, 0);
             }
 
             AtlasTexture.InputSprite d = new("y", 32, 32);
-            for (int i = 0; i < d.Pixels.Length; i++)
+            for (uint i = 0; i < d.Pixels.length; i++)
             {
                 d.Pixels[i] = new(byte.MaxValue, byte.MaxValue, 0, 0);
             }
@@ -131,7 +131,7 @@ namespace Textures.Tests
             AtlasTexture atlas = new(world, sprites);
             Assert.That(atlas.Width, Is.EqualTo(64));
             Assert.That(atlas.Height, Is.EqualTo(64));
-            Assert.That(atlas.Sprites.Length, Is.EqualTo(4));
+            Assert.That(atlas.Sprites.length, Is.EqualTo(4));
         }
     }
 }
