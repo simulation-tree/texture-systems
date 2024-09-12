@@ -76,6 +76,8 @@ namespace Textures.Tests
             Assert.That(texture.Height, Is.EqualTo(9));
             Assert.That(texture.Pixels.length, Is.EqualTo(16 * 9));
 
+            texture[0, 0] = new(1, 0, 0, 1);
+
             float hueThreshold = 3f; //compression
 
             //bottom left is yellow
