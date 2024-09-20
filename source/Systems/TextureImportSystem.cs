@@ -129,7 +129,7 @@ namespace Textures.Systems
                 else
                 {
                     operation.ResizeArray<Pixel>(pixels.Length);
-                    operation.SetArrayElement(0, pixels.AsSpan());
+                    operation.SetArrayElements(0, pixels.AsSpan());
                 }
 
                 operations.Enqueue(operation);
