@@ -1,78 +1,105 @@
 ﻿using Simulation;
+using Simulation.Functions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using System;
-using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Textures.Components;
-using Textures.Events;
 using Unmanaged;
 using Unmanaged.Collections;
 
 namespace Textures.Systems
 {
-    public class TextureImportSystem : SystemBase
+    public readonly struct TextureImportSystem : ISystem
     {
         private readonly ComponentQuery<IsTextureRequest> textureRequestsQuery;
         private readonly ComponentQuery<IsTexture> texturesQuery;
-        private readonly UnmanagedDictionary<uint, uint> textureVersions;
-        private readonly ConcurrentQueue<Operation> operations;
+        private readonly UnmanagedDictionary<Entity, uint> textureVersions;
+        private readonly UnmanagedList<Operation> operations;
 
-        public TextureImportSystem(World world) : base(world)
+        readonly unsafe InitializeFunction ISystem.Initialize => new(&Initialize);
+        readonly unsafe IterateFunction ISystem.Update => new(&Update);
+        readonly unsafe FinalizeFunction ISystem.Finalize => new(&Finalize);
+
+        [UnmanagedCallersOnly]
+        private static void Initialize(SystemContainer container, World world)
+        {
+        }
+
+        [UnmanagedCallersOnly]
+        private static void Update(SystemContainer container, World world, TimeSpan delta)
+        {
+            ref TextureImportSystem system = ref container.Read<TextureImportSystem>();
+            system.Update(world);
+        }
+
+        [UnmanagedCallersOnly]
+        private static void Finalize(SystemContainer container, World world)
+        {
+            if (container.World == world)
+            {
+                ref TextureImportSystem system = ref container.Read<TextureImportSystem>();
+                system.Dispose();
+            }
+        }
+
+        public TextureImportSystem()
         {
             textureRequestsQuery = new();
             texturesQuery = new();
             textureVersions = new();
-            Subscribe<TextureUpdate>(Update);
             operations = new();
         }
 
-        public override void Dispose()
+        private void Dispose()
         {
-            while (operations.TryDequeue(out Operation operation))
+            while (operations.Count > 0)
             {
+                Operation operation = operations.RemoveAt(0);
                 operation.Dispose();
             }
 
+            operations.Dispose();
             textureVersions.Dispose();
             texturesQuery.Dispose();
             textureRequestsQuery.Dispose();
-            base.Dispose();
         }
 
-        private void Update(TextureUpdate e)
+        private void Update(World world)
         {
             textureRequestsQuery.Update(world);
             foreach (var r in textureRequestsQuery)
             {
                 IsTextureRequest request = r.Component1;
                 bool sourceChanged = false;
-                uint textureEntity = r.entity;
-                if (!textureVersions.ContainsKey(textureEntity))
+                Entity texture = new(world, r.entity);
+                if (!textureVersions.ContainsKey(texture))
                 {
                     sourceChanged = true;
                 }
                 else
                 {
-                    sourceChanged = textureVersions[textureEntity] != request.version;
+                    sourceChanged = textureVersions[texture] != request.version;
                 }
 
                 if (sourceChanged)
                 {
-                    //ThreadPool.QueueUserWorkItem(LoadImageDataOntoEntity, textureEntity, false);
-                    if (TryLoadImageDataOntoEntity(textureEntity))
+                    if (TryLoadImageDataOntoEntity(texture))
                     {
-                        textureVersions.AddOrSet(textureEntity, request.version);
+                        textureVersions.AddOrSet(texture, request.version);
                     }
                 }
             }
 
-            PerformInstructions();
+            PerformInstructions(world);
         }
 
-        private void PerformInstructions()
+        private void PerformInstructions(World world)
         {
-            while (operations.TryDequeue(out Operation operation))
+            while (operations.Count > 0)
             {
+                Operation operation = operations.RemoveAt(0);
                 world.Perform(operation);
                 operation.Dispose();
             }
@@ -82,16 +109,17 @@ namespace Textures.Systems
         /// Updates the entity with the latest pixel data using the <see cref="byte"/>
         /// collection on it.
         /// </summary>
-        private bool TryLoadImageDataOntoEntity(uint entity)
+        private bool TryLoadImageDataOntoEntity(Entity texture)
         {
-            if (!world.ContainsArray<byte>(entity))
+            World world = texture.GetWorld();
+            if (!texture.ContainsArray<byte>())
             {
                 return false;
             }
 
             //update pixels collection
-            Console.WriteLine($"Loading image data onto entity `{entity}`");
-            USpan<byte> bytes = world.GetArray<byte>(entity);
+            Debug.WriteLine($"Loading image data onto entity `{texture}`");
+            USpan<byte> bytes = texture.GetArray<byte>();
             using (Image<Rgba32> image = Image.Load<Rgba32>(bytes.AsSystemSpan()))
             {
                 uint width = (uint)image.Width;
@@ -108,8 +136,8 @@ namespace Textures.Systems
 
                 //update texture size data
                 Operation operation = new();
-                operation.SelectEntity(entity);
-                if (world.TryGetComponent(entity, out IsTexture component))
+                operation.SelectEntity(texture);
+                if (texture.TryGetComponent(out IsTexture component))
                 {
                     component.width = width;
                     component.height = height;
@@ -122,7 +150,7 @@ namespace Textures.Systems
                 }
 
                 //put list
-                if (!world.ContainsArray<Pixel>(entity))
+                if (!texture.ContainsArray<Pixel>())
                 {
                     operation.CreateArray<Pixel>(pixels.AsSpan());
                 }
@@ -132,8 +160,8 @@ namespace Textures.Systems
                     operation.SetArrayElements(0, pixels.AsSpan());
                 }
 
-                operations.Enqueue(operation);
-                Console.WriteLine($"Finished loading image data onto entity `{entity}`");
+                operations.Add(operation);
+                Debug.WriteLine($"Finished loading image data onto entity `{texture}`");
                 return true;
             }
         }

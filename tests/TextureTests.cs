@@ -1,36 +1,32 @@
 ﻿using Data;
-using Data.Events;
 using Data.Systems;
-using Simulation;
-using System;
+using Simulation.Tests;
 using System.Threading;
 using System.Threading.Tasks;
-using Textures.Events;
 using Textures.Systems;
 using Unmanaged;
-using Unmanaged.Collections;
 
 namespace Textures.Tests
 {
-    public class TextureTests
+    public class TextureTests : SimulationTests
     {
-        [TearDown]
-        public void CleanUp()
+        protected override void SetUp()
         {
-            Allocations.ThrowIfAny();
+            base.SetUp();
+            Simulator.AddSystem<DataImportSystem>();
+            Simulator.AddSystem<TextureImportSystem>();
         }
 
         [Test]
         public void CreateEmptyTexture()
         {
-            using World world = new();
             USpan<Pixel> pixels = stackalloc Pixel[16];
             for (uint i = 0; i < pixels.Length; i++)
             {
                 pixels[i] = new Pixel(byte.MaxValue, 0, 0, byte.MaxValue);
             }
 
-            Texture emptyTexture = new(world, 4, 4, pixels);
+            Texture emptyTexture = new(World, 4, 4, pixels);
             Assert.That(emptyTexture.Width, Is.EqualTo(4));
             Assert.That(emptyTexture.Height, Is.EqualTo(4));
             Pixel[] pixelsArray = emptyTexture.Pixels.ToArray();
@@ -58,19 +54,10 @@ namespace Textures.Tests
                 23,9,124,171,212,0,0,0,0,73,69,78,68,174,66,96,130
             ];
 
-            using World world = new();
-            using DataImportSystem dataImports = new(world);
-            using TextureImportSystem textureImports = new(world);
-            DataSource testTextureFile = new(world, "testTexture", texturePngData);
-            
-            Texture texture = new(world, "testTexture");
-            await texture.UntilCompliant(async (world, cancellation) =>
-            {
-                world.Submit(new DataUpdate());
-                world.Submit(new TextureUpdate());
-                world.Poll();
-                await Task.Delay(1, cancellation).ConfigureAwait(false);
-            }, cancellation);
+            DataSource testTextureFile = new(World, "testTexture", texturePngData);
+
+            Texture texture = new(World, "testTexture");
+            await texture.UntilCompliant(Simulate, cancellation);
 
             Assert.That(texture.Width, Is.EqualTo(16));
             Assert.That(texture.Height, Is.EqualTo(9));
@@ -99,7 +86,6 @@ namespace Textures.Tests
         [Test]
         public void CreateAtlasTextureFromSprites()
         {
-            using World world = new();
             USpan<AtlasTexture.InputSprite> sprites = stackalloc AtlasTexture.InputSprite[4];
             AtlasTexture.InputSprite a = new("r", 32, 32);
             for (uint i = 0; i < a.Pixels.Length; i++)
@@ -130,7 +116,7 @@ namespace Textures.Tests
             sprites[2] = c;
             sprites[3] = d;
 
-            AtlasTexture atlas = new(world, sprites);
+            AtlasTexture atlas = new(World, sprites);
             Assert.That(atlas.Width, Is.EqualTo(64));
             Assert.That(atlas.Height, Is.EqualTo(64));
             Assert.That(atlas.Sprites.Length, Is.EqualTo(4));
