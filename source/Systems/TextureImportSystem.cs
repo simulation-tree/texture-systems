@@ -1,4 +1,5 @@
-﻿using Simulation;
+﻿using Collections;
+using Simulation;
 using Simulation.Functions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -7,7 +8,6 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Textures.Components;
 using Unmanaged;
-using Unmanaged.Collections;
 
 namespace Textures.Systems
 {
@@ -15,8 +15,8 @@ namespace Textures.Systems
     {
         private readonly ComponentQuery<IsTextureRequest> textureRequestsQuery;
         private readonly ComponentQuery<IsTexture> texturesQuery;
-        private readonly UnmanagedDictionary<Entity, uint> textureVersions;
-        private readonly UnmanagedList<Operation> operations;
+        private readonly Dictionary<Entity, uint> textureVersions;
+        private readonly List<Operation> operations;
 
         readonly unsafe InitializeFunction ISystem.Initialize => new(&Initialize);
         readonly unsafe IterateFunction ISystem.Update => new(&Update);
@@ -125,7 +125,7 @@ namespace Textures.Systems
                 uint width = (uint)image.Width;
                 uint height = (uint)image.Height;
                 uint pixelCount = width * height;
-                using UnmanagedArray<Pixel> pixels = new(pixelCount);
+                using Array<Pixel> pixels = new(pixelCount);
                 for (uint p = 0; p < pixelCount; p++)
                 {
                     uint x = p % width;
