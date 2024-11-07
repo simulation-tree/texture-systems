@@ -40,7 +40,7 @@ namespace Textures.Systems
             if (container.World == world)
             {
                 ref TextureImportSystem system = ref container.Read<TextureImportSystem>();
-                system.Dispose();
+                system.CleanUp();
             }
         }
 
@@ -52,7 +52,7 @@ namespace Textures.Systems
             operations = new();
         }
 
-        private void Dispose()
+        private void CleanUp()
         {
             while (operations.Count > 0)
             {
