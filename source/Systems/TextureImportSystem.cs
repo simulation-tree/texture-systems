@@ -118,7 +118,7 @@ namespace Textures.Systems
             }
 
             //update pixels collection
-            Debug.WriteLine($"Loading image data onto entity `{texture}`");
+            Trace.WriteLine($"Loading image data onto entity `{texture}`");
             USpan<byte> bytes = texture.GetArray<byte>();
             using (Image<Rgba32> image = Image.Load<Rgba32>(bytes.AsSystemSpan()))
             {
@@ -161,7 +161,7 @@ namespace Textures.Systems
                 }
 
                 operations.Add(operation);
-                Debug.WriteLine($"Finished loading image data onto entity `{texture}`");
+                Trace.WriteLine($"Finished loading image data onto entity `{texture}`");
                 return true;
             }
         }
