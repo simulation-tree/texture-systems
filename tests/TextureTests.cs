@@ -1,10 +1,14 @@
 ﻿using Data;
+using Data.Components;
 using Data.Systems;
+using Simulation.Components;
 using Simulation.Tests;
 using System.Threading;
 using System.Threading.Tasks;
+using Textures.Components;
 using Textures.Systems;
 using Unmanaged;
+using Worlds;
 
 namespace Textures.Tests
 {
@@ -13,6 +17,16 @@ namespace Textures.Tests
         protected override void SetUp()
         {
             base.SetUp();
+            ComponentType.Register<IsTexture>();
+            ComponentType.Register<IsTextureRequest>();
+            ComponentType.Register<IsDataRequest>();
+            ComponentType.Register<IsDataSource>();
+            ComponentType.Register<IsData>();
+            ComponentType.Register<IsProgram>();
+            ComponentType.Register<ProgramAllocation>();
+            ArrayType.Register<BinaryData>();
+            ArrayType.Register<AtlasSprite>();
+            ArrayType.Register<Pixel>();
             Simulator.AddSystem<DataImportSystem>();
             Simulator.AddSystem<TextureImportSystem>();
         }

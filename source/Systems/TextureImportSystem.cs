@@ -1,4 +1,5 @@
 ﻿using Collections;
+using Data.Components;
 using Simulation;
 using Simulation.Functions;
 using SixLabors.ImageSharp;
@@ -8,6 +9,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Textures.Components;
 using Unmanaged;
+using Worlds;
 
 namespace Textures.Systems
 {
@@ -18,12 +20,12 @@ namespace Textures.Systems
         private readonly Dictionary<Entity, uint> textureVersions;
         private readonly List<Operation> operations;
 
-        readonly unsafe InitializeFunction ISystem.Initialize => new(&Initialize);
-        readonly unsafe IterateFunction ISystem.Iterate => new(&Update);
-        readonly unsafe FinalizeFunction ISystem.Finalize => new(&Finalize);
+        readonly unsafe StartSystem ISystem.Start => new(&Start);
+        readonly unsafe UpdateSystem ISystem.Update => new(&Update);
+        readonly unsafe FinishSystem ISystem.Finish => new(&Finish);
 
         [UnmanagedCallersOnly]
-        private static void Initialize(SystemContainer container, World world)
+        private static void Start(SystemContainer container, World world)
         {
         }
 
@@ -35,7 +37,7 @@ namespace Textures.Systems
         }
 
         [UnmanagedCallersOnly]
-        private static void Finalize(SystemContainer container, World world)
+        private static void Finish(SystemContainer container, World world)
         {
             if (container.World == world)
             {
@@ -111,15 +113,14 @@ namespace Textures.Systems
         /// </summary>
         private bool TryLoadImageDataOntoEntity(Entity texture)
         {
-            World world = texture.GetWorld();
-            if (!texture.ContainsArray<byte>())
+            if (!texture.ContainsArray<BinaryData>())
             {
                 return false;
             }
 
             //update pixels collection
             Trace.WriteLine($"Loading image data onto entity `{texture}`");
-            USpan<byte> bytes = texture.GetArray<byte>();
+            USpan<byte> bytes = texture.GetArray<BinaryData>().As<byte>();
             using (Image<Rgba32> image = Image.Load<Rgba32>(bytes.AsSystemSpan()))
             {
                 uint width = (uint)image.Width;
