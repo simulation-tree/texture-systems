@@ -137,28 +137,28 @@ namespace Textures.Systems
 
                 //update texture size data
                 Operation operation = new();
-                operation.SelectEntity(texture);
+                Operation.SelectedEntity selectedEntity = operation.SelectEntity(texture);
                 if (texture.TryGetComponent(out IsTexture component))
                 {
                     component.width = width;
                     component.height = height;
                     component.version++;
-                    operation.SetComponent(component);
+                    selectedEntity.SetComponent(component);
                 }
                 else
                 {
-                    operation.AddComponent(new IsTexture(width, height));
+                    selectedEntity.AddComponent(new IsTexture(width, height));
                 }
 
                 //put list
                 if (!texture.ContainsArray<Pixel>())
                 {
-                    operation.CreateArray<Pixel>(pixels.AsSpan());
+                    selectedEntity.CreateArray(pixels.AsSpan());
                 }
                 else
                 {
-                    operation.ResizeArray<Pixel>(pixels.Length);
-                    operation.SetArrayElements(0, pixels.AsSpan());
+                    selectedEntity.ResizeArray<Pixel>(pixels.Length);
+                    selectedEntity.SetArrayElements(0, pixels.AsSpan());
                 }
 
                 operations.Add(operation);
