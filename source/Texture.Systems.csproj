@@ -15,6 +15,10 @@
 	<ItemGroup>
 		<ProjectReference Include="..\..\textures\source\Textures.csproj" />
 		<ProjectReference Include="..\..\worlds\source\Worlds.csproj" />
+		<ProjectReference Include="..\..\simulation\generator\Simulation.ImplementationGenerators.csproj">
+			<OutputItemType>Analyzer</OutputItemType>
+			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+		</ProjectReference>
 	</ItemGroup>
 
 </Project>

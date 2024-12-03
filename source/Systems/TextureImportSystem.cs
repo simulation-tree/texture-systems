@@ -1,48 +1,37 @@
 ﻿using Collections;
 using Data.Components;
 using Simulation;
-using Simulation.Functions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using Textures.Components;
 using Unmanaged;
 using Worlds;
 
 namespace Textures.Systems
 {
-    public readonly struct TextureImportSystem : ISystem
+    public readonly partial struct TextureImportSystem : ISystem
     {
         private readonly ComponentQuery<IsTextureRequest> textureRequestsQuery;
         private readonly ComponentQuery<IsTexture> texturesQuery;
         private readonly Dictionary<Entity, uint> textureVersions;
         private readonly List<Operation> operations;
 
-        readonly unsafe StartSystem ISystem.Start => new(&Start);
-        readonly unsafe UpdateSystem ISystem.Update => new(&Update);
-        readonly unsafe FinishSystem ISystem.Finish => new(&Finish);
-
-        [UnmanagedCallersOnly]
-        private static void Start(SystemContainer container, World world)
+        void ISystem.Start(in SystemContainer systemContainer, in World world)
         {
         }
 
-        [UnmanagedCallersOnly]
-        private static void Update(SystemContainer container, World world, TimeSpan delta)
+        void ISystem.Update(in SystemContainer systemContainer, in World world, in TimeSpan delta)
         {
-            ref TextureImportSystem system = ref container.Read<TextureImportSystem>();
-            system.Update(world);
+            Update(world);
         }
 
-        [UnmanagedCallersOnly]
-        private static void Finish(SystemContainer container, World world)
+        void ISystem.Finish(in SystemContainer systemContainer, in World world)
         {
-            if (container.World == world)
+            if (systemContainer.World == world)
             {
-                ref TextureImportSystem system = ref container.Read<TextureImportSystem>();
-                system.CleanUp();
+                CleanUp();
             }
         }
 
