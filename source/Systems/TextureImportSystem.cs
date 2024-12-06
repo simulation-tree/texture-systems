@@ -13,10 +13,14 @@ namespace Textures.Systems
 {
     public readonly partial struct TextureImportSystem : ISystem
     {
-        private readonly ComponentQuery<IsTextureRequest> textureRequestsQuery;
-        private readonly ComponentQuery<IsTexture> texturesQuery;
         private readonly Dictionary<Entity, uint> textureVersions;
         private readonly List<Operation> operations;
+
+        public TextureImportSystem()
+        {
+            textureVersions = new();
+            operations = new();
+        }
 
         void ISystem.Start(in SystemContainer systemContainer, in World world)
         {
@@ -24,26 +28,15 @@ namespace Textures.Systems
 
         void ISystem.Update(in SystemContainer systemContainer, in World world, in TimeSpan delta)
         {
-            Update(world);
+            LoadDataOntoEntities(world);
+            PerformInstructions(world);
         }
 
         void ISystem.Finish(in SystemContainer systemContainer, in World world)
         {
-            if (systemContainer.World == world)
-            {
-                CleanUp();
-            }
         }
 
-        public TextureImportSystem()
-        {
-            textureRequestsQuery = new();
-            texturesQuery = new();
-            textureVersions = new();
-            operations = new();
-        }
-
-        private void CleanUp()
+        void IDisposable.Dispose()
         {
             while (operations.Count > 0)
             {
@@ -53,17 +46,15 @@ namespace Textures.Systems
 
             operations.Dispose();
             textureVersions.Dispose();
-            texturesQuery.Dispose();
-            textureRequestsQuery.Dispose();
         }
 
-        private void Update(World world)
+        private readonly void LoadDataOntoEntities(World world)
         {
-            textureRequestsQuery.Update(world);
-            foreach (var r in textureRequestsQuery)
+            ComponentQuery<IsTextureRequest> requestQuery = new(world);
+            foreach (var r in requestQuery)
             {
-                IsTextureRequest request = r.Component1;
-                bool sourceChanged = false;
+                ref IsTextureRequest request = ref r.component1;
+                bool sourceChanged;
                 Entity texture = new(world, r.entity);
                 if (!textureVersions.ContainsKey(texture))
                 {
@@ -76,17 +67,15 @@ namespace Textures.Systems
 
                 if (sourceChanged)
                 {
-                    if (TryLoadImageDataOntoEntity(texture))
+                    if (TryLoad(texture))
                     {
                         textureVersions.AddOrSet(texture, request.version);
                     }
                 }
             }
-
-            PerformInstructions(world);
         }
 
-        private void PerformInstructions(World world)
+        private readonly void PerformInstructions(World world)
         {
             while (operations.Count > 0)
             {
@@ -100,7 +89,7 @@ namespace Textures.Systems
         /// Updates the entity with the latest pixel data using the <see cref="byte"/>
         /// collection on it.
         /// </summary>
-        private bool TryLoadImageDataOntoEntity(Entity texture)
+        private readonly bool TryLoad(Entity texture)
         {
             if (!texture.ContainsArray<BinaryData>())
             {
@@ -127,12 +116,10 @@ namespace Textures.Systems
                 //update texture size data
                 Operation operation = new();
                 Operation.SelectedEntity selectedEntity = operation.SelectEntity(texture);
-                if (texture.TryGetComponent(out IsTexture component))
+                ref IsTexture component = ref texture.TryGetComponent<IsTexture>(out bool contains);
+                if (contains)
                 {
-                    component.width = width;
-                    component.height = height;
-                    component.version++;
-                    selectedEntity.SetComponent(component);
+                    selectedEntity.SetComponent(new IsTexture(width, height, component.version + 1));
                 }
                 else
                 {
