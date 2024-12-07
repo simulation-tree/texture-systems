@@ -26,8 +26,8 @@ namespace Textures.Tests
             ArrayType.Register<BinaryData>();
             ArrayType.Register<AtlasSprite>();
             ArrayType.Register<Pixel>();
-            Simulator.AddSystem(new DataImportSystem());
-            Simulator.AddSystem(new TextureImportSystem());
+            Simulator.AddSystem<DataImportSystem>();
+            Simulator.AddSystem<TextureImportSystem>();
         }
 
         [Test]

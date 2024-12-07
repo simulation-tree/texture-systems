@@ -16,14 +16,20 @@ namespace Textures.Systems
         private readonly Dictionary<Entity, uint> textureVersions;
         private readonly List<Operation> operations;
 
-        public TextureImportSystem()
+        private TextureImportSystem(Dictionary<Entity, uint> textureVersions, List<Operation> operations)
         {
-            textureVersions = new();
-            operations = new();
+            this.textureVersions = textureVersions;
+            this.operations = operations;
         }
 
         void ISystem.Start(in SystemContainer systemContainer, in World world)
         {
+            if (systemContainer.World == world)
+            {
+                Dictionary<Entity, uint> textureVersions = new();
+                List<Operation> operations = new();
+                systemContainer.Write(new TextureImportSystem(textureVersions, operations));
+            }
         }
 
         void ISystem.Update(in SystemContainer systemContainer, in World world, in TimeSpan delta)
