@@ -30,7 +30,7 @@
 		<ProjectReference Include="..\..\simulation\tests\Simulation.Tests.csproj" />
 		<ProjectReference Include="..\..\unmanaged\source\Unmanaged.csproj" />
 		<ProjectReference Include="..\..\unmanaged\tests\Unmanaged.Tests.csproj" />
-		<ProjectReference Include="..\source\Texture.Systems.csproj" />
+		<ProjectReference Include="..\source\Textures.Systems.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

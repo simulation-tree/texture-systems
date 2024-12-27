@@ -14,20 +14,31 @@ namespace Textures.Tests
 {
     public class TextureTests : SimulationTests
     {
+        static TextureTests()
+        {
+            TypeLayout.Register<IsTexture>("IsTexture");
+            TypeLayout.Register<IsTextureRequest>("IsTextureRequest");
+            TypeLayout.Register<IsDataRequest>("IsDataRequest");
+            TypeLayout.Register<IsDataSource>("IsDataSource");
+            TypeLayout.Register<IsData>("IsData");
+            TypeLayout.Register<BinaryData>("BinaryData");
+            TypeLayout.Register<AtlasSprite>("AtlasSprite");
+            TypeLayout.Register<Pixel>("Pixel");
+        }
+
         protected override void SetUp()
         {
             base.SetUp();
-            ComponentType.Register<IsTexture>();
-            ComponentType.Register<IsTextureRequest>();
-            ComponentType.Register<IsDataRequest>();
-            ComponentType.Register<IsDataSource>();
-            ComponentType.Register<IsData>();
-            ComponentType.Register<IsProgram>();
-            ArrayType.Register<BinaryData>();
-            ArrayType.Register<AtlasSprite>();
-            ArrayType.Register<Pixel>();
-            Simulator.AddSystem<DataImportSystem>();
-            Simulator.AddSystem<TextureImportSystem>();
+            world.Schema.RegisterComponent<IsTexture>();
+            world.Schema.RegisterComponent<IsTextureRequest>();
+            world.Schema.RegisterComponent<IsDataRequest>();
+            world.Schema.RegisterComponent<IsDataSource>();
+            world.Schema.RegisterComponent<IsData>();
+            world.Schema.RegisterArrayElement<BinaryData>();
+            world.Schema.RegisterArrayElement<AtlasSprite>();
+            world.Schema.RegisterArrayElement<Pixel>();
+            simulator.AddSystem<DataImportSystem>();
+            simulator.AddSystem<TextureImportSystem>();
         }
 
         [Test]
@@ -39,7 +50,7 @@ namespace Textures.Tests
                 pixels[i] = new Pixel(byte.MaxValue, 0, 0, byte.MaxValue);
             }
 
-            Texture emptyTexture = new(World, 4, 4, pixels);
+            Texture emptyTexture = new(world, 4, 4, pixels);
             Assert.That(emptyTexture.Width, Is.EqualTo(4));
             Assert.That(emptyTexture.Height, Is.EqualTo(4));
             Pixel[] pixelsArray = emptyTexture.Pixels.ToArray();
@@ -67,9 +78,9 @@ namespace Textures.Tests
                 23,9,124,171,212,0,0,0,0,73,69,78,68,174,66,96,130
             ];
 
-            DataSource testTextureFile = new(World, "testTexture", texturePngData);
+            DataSource testTextureFile = new(world, "testTexture", texturePngData);
 
-            Texture texture = new(World, "testTexture");
+            Texture texture = new(world, "testTexture");
             await texture.UntilCompliant(Simulate, cancellation);
 
             Assert.That(texture.Width, Is.EqualTo(16));
@@ -129,7 +140,7 @@ namespace Textures.Tests
             sprites[2] = c;
             sprites[3] = d;
 
-            AtlasTexture atlas = new(World, sprites);
+            AtlasTexture atlas = new(world, sprites);
             Assert.That(atlas.Width, Is.EqualTo(64));
             Assert.That(atlas.Height, Is.EqualTo(64));
             Assert.That(atlas.Sprites.Length, Is.EqualTo(4));

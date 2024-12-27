@@ -104,6 +104,7 @@ namespace Textures.Systems
             //update pixels collection
             Trace.WriteLine($"Loading image data onto entity `{texture}`");
             USpan<byte> bytes = texture.GetArray<BinaryData>().As<byte>();
+            Schema schema = texture.GetWorld().Schema;
             using (Image<Rgba32> image = Image.Load<Rgba32>(bytes.AsSystemSpan()))
             {
                 uint width = (uint)image.Width;
@@ -124,22 +125,22 @@ namespace Textures.Systems
                 ref IsTexture component = ref texture.TryGetComponent<IsTexture>(out bool contains);
                 if (contains)
                 {
-                    selectedEntity.SetComponent(new IsTexture(width, height, component.version + 1));
+                    selectedEntity.SetComponent(new IsTexture(width, height, component.version + 1), schema);
                 }
                 else
                 {
-                    selectedEntity.AddComponent(new IsTexture(width, height));
+                    selectedEntity.AddComponent(new IsTexture(width, height), schema);
                 }
 
                 //put list
                 if (!texture.ContainsArray<Pixel>())
                 {
-                    selectedEntity.CreateArray(pixels.AsSpan());
+                    selectedEntity.CreateArray(pixels.AsSpan(), schema);
                 }
                 else
                 {
-                    selectedEntity.ResizeArray<Pixel>(pixels.Length);
-                    selectedEntity.SetArrayElements(0, pixels.AsSpan());
+                    selectedEntity.ResizeArray<Pixel>(pixels.Length, schema);
+                    selectedEntity.SetArrayElements(0, pixels.AsSpan(), schema);
                 }
 
                 operations.Add(operation);
