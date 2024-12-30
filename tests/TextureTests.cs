@@ -16,14 +16,14 @@ namespace Textures.Tests
     {
         static TextureTests()
         {
-            TypeLayout.Register<IsTexture>("IsTexture");
-            TypeLayout.Register<IsTextureRequest>("IsTextureRequest");
-            TypeLayout.Register<IsDataRequest>("IsDataRequest");
-            TypeLayout.Register<IsDataSource>("IsDataSource");
-            TypeLayout.Register<IsData>("IsData");
-            TypeLayout.Register<BinaryData>("BinaryData");
-            TypeLayout.Register<AtlasSprite>("AtlasSprite");
-            TypeLayout.Register<Pixel>("Pixel");
+            TypeLayout.Register<IsTexture>();
+            TypeLayout.Register<IsTextureRequest>();
+            TypeLayout.Register<IsDataRequest>();
+            TypeLayout.Register<IsDataSource>();
+            TypeLayout.Register<IsData>();
+            TypeLayout.Register<BinaryData>();
+            TypeLayout.Register<AtlasSprite>();
+            TypeLayout.Register<Pixel>();
         }
 
         protected override void SetUp()
