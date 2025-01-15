@@ -13,6 +13,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\..\simulation\source\Simulation.csproj" />
 		<ProjectReference Include="..\..\textures\source\Textures.csproj" />
 		<ProjectReference Include="..\..\worlds\source\Worlds.csproj" />
 		<ProjectReference Include="..\..\simulation\generator\Simulation.ImplementationGenerators.csproj">
