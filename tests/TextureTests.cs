@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Textures.Components;
 using Textures.Systems;
+using Types;
 using Unmanaged;
 using Worlds;
 
