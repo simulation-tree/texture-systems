@@ -14,9 +14,9 @@ namespace Textures.Systems
     public readonly partial struct TextureImportSystem : ISystem
     {
         private readonly Dictionary<Entity, uint> textureVersions;
-        private readonly List<Operation> operations;
+        private readonly Stack<Operation> operations;
 
-        private TextureImportSystem(Dictionary<Entity, uint> textureVersions, List<Operation> operations)
+        private TextureImportSystem(Dictionary<Entity, uint> textureVersions, Stack<Operation> operations)
         {
             this.textureVersions = textureVersions;
             this.operations = operations;
@@ -27,7 +27,7 @@ namespace Textures.Systems
             if (systemContainer.World == world)
             {
                 Dictionary<Entity, uint> textureVersions = new();
-                List<Operation> operations = new();
+                Stack<Operation> operations = new();
                 systemContainer.Write(new TextureImportSystem(textureVersions, operations));
             }
         }
@@ -42,9 +42,8 @@ namespace Textures.Systems
         {
             if (systemContainer.World == world)
             {
-                while (operations.Count > 0)
+                while (operations.TryPop(out Operation operation))
                 {
-                    Operation operation = operations.RemoveAt(0);
                     operation.Dispose();
                 }
 
@@ -82,9 +81,8 @@ namespace Textures.Systems
 
         private readonly void PerformInstructions(World world)
         {
-            while (operations.Count > 0)
+            while (operations.TryPop(out Operation operation))
             {
-                Operation operation = operations.RemoveAt(0);
                 world.Perform(operation);
                 operation.Dispose();
             }
@@ -143,7 +141,7 @@ namespace Textures.Systems
                     selectedEntity.SetArrayElements(0, pixels.AsSpan(), schema);
                 }
 
-                operations.Add(operation);
+                operations.Push(operation);
                 Trace.WriteLine($"Finished loading image data onto entity `{texture}`");
                 return true;
             }
