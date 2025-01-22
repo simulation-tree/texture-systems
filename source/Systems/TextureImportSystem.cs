@@ -103,7 +103,7 @@ namespace Textures.Systems
             Trace.WriteLine($"Loading image data onto entity `{texture}`");
             USpan<byte> bytes = texture.GetArray<BinaryData>().As<byte>();
             Schema schema = texture.GetWorld().Schema;
-            using (Image<Rgba32> image = Image.Load<Rgba32>(bytes.AsSystemSpan()))
+            using (Image<Rgba32> image = Image.Load<Rgba32>(bytes))
             {
                 uint width = (uint)image.Width;
                 uint height = (uint)image.Height;
