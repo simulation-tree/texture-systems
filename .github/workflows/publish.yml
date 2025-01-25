@@ -49,6 +49,20 @@ jobs:
           repository: game-simulations/textures
           token: ${{ secrets.PAT }}
           path: textures
+
+      - name: Checkout `data`
+        uses: actions/checkout@v4.1.2
+        with:
+          repository: game-simulations/data
+          token: ${{ secrets.PAT }}
+          path: data
+
+      - name: Checkout `bin-packer`
+        uses: actions/checkout@v4.1.2
+        with:
+          repository: game-simulations/bin-packer
+          token: ${{ secrets.PAT }}
+          path: bin-packer
       
       - name: Setup dotnet
         uses: actions/setup-dotnet@v4
