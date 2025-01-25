@@ -56,6 +56,13 @@ jobs:
           token: ${{ secrets.PAT }}
           path: worlds
 
+      - name: Checkout `simulations`
+        uses: actions/checkout@v4.1.2
+        with:
+          repository: game-simulations/simulations
+          token: ${{ secrets.PAT }}
+          path: simulations
+
       - name: Checkout `textures`
         uses: actions/checkout@v4.1.2
         with:
