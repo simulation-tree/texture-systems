@@ -1,46 +1,13 @@
 ﻿using Data;
-using Data.Components;
-using Data.Systems;
-using Simulation.Tests;
 using System.Threading;
 using System.Threading.Tasks;
-using Textures.Components;
-using Textures.Systems;
-using Types;
 using Unmanaged;
 using Worlds;
 
 namespace Textures.Tests
 {
-    public class TextureTests : SimulationTests
+    public class TextureTests : TextureSystemsTests
     {
-        static TextureTests()
-        {
-            TypeLayout.Register<IsTexture>();
-            TypeLayout.Register<IsTextureRequest>();
-            TypeLayout.Register<IsDataRequest>();
-            TypeLayout.Register<IsDataSource>();
-            TypeLayout.Register<IsData>();
-            TypeLayout.Register<BinaryData>();
-            TypeLayout.Register<AtlasSprite>();
-            TypeLayout.Register<Pixel>();
-        }
-
-        protected override void SetUp()
-        {
-            base.SetUp();
-            world.Schema.RegisterComponent<IsTexture>();
-            world.Schema.RegisterComponent<IsTextureRequest>();
-            world.Schema.RegisterComponent<IsDataRequest>();
-            world.Schema.RegisterComponent<IsDataSource>();
-            world.Schema.RegisterComponent<IsData>();
-            world.Schema.RegisterArrayElement<BinaryData>();
-            world.Schema.RegisterArrayElement<AtlasSprite>();
-            world.Schema.RegisterArrayElement<Pixel>();
-            simulator.AddSystem<DataImportSystem>();
-            simulator.AddSystem<TextureImportSystem>();
-        }
-
         [Test]
         public void CreateEmptyTexture()
         {
