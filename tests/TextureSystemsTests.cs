@@ -10,7 +10,7 @@ namespace Textures.Tests
     {
         static TextureSystemsTests()
         {
-            TypeRegistry.Load<Data.TypeBank>();
+            TypeRegistry.Load<Data.Core.TypeBank>();
             TypeRegistry.Load<Textures.TypeBank>();
         }
 
@@ -24,7 +24,7 @@ namespace Textures.Tests
         protected override Schema CreateSchema()
         {
             Schema schema = base.CreateSchema();
-            schema.Load<Data.SchemaBank>();
+            schema.Load<Data.Core.SchemaBank>();
             schema.Load<Textures.SchemaBank>();
             return schema;
         }
