@@ -1,4 +1,5 @@
-﻿using Data.Systems;
+﻿using Data;
+using Data.Systems;
 using Simulation.Tests;
 using Textures.Systems;
 using Types;
@@ -10,8 +11,8 @@ namespace Textures.Tests
     {
         static TextureSystemsTests()
         {
-            TypeRegistry.Load<Data.Core.TypeBank>();
-            TypeRegistry.Load<Textures.TypeBank>();
+            TypeRegistry.Load<DataTypeBank>();
+            TypeRegistry.Load<TexturesTypeBank>();
         }
 
         protected override void SetUp()
@@ -24,8 +25,8 @@ namespace Textures.Tests
         protected override Schema CreateSchema()
         {
             Schema schema = base.CreateSchema();
-            schema.Load<Data.Core.SchemaBank>();
-            schema.Load<Textures.SchemaBank>();
+            schema.Load<DataSchemaBank>();
+            schema.Load<TexturesSchemaBank>();
             return schema;
         }
     }
