@@ -1,5 +1,5 @@
 ﻿using Collections;
-using Data.Components;
+using Data.Messages;
 using Simulation;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -13,12 +13,10 @@ namespace Textures.Systems
 {
     public readonly partial struct TextureImportSystem : ISystem
     {
-        private readonly Dictionary<Entity, uint> textureVersions;
         private readonly Stack<Operation> operations;
 
-        private TextureImportSystem(Dictionary<Entity, uint> textureVersions, Stack<Operation> operations)
+        private TextureImportSystem(Stack<Operation> operations)
         {
-            this.textureVersions = textureVersions;
             this.operations = operations;
         }
 
@@ -26,15 +24,13 @@ namespace Textures.Systems
         {
             if (systemContainer.World == world)
             {
-                Dictionary<Entity, uint> textureVersions = new();
-                Stack<Operation> operations = new();
-                systemContainer.Write(new TextureImportSystem(textureVersions, operations));
+                systemContainer.Write(new TextureImportSystem(new()));
             }
         }
 
         void ISystem.Update(in SystemContainer systemContainer, in World world, in TimeSpan delta)
         {
-            LoadDataOntoEntities(world);
+            LoadDataOntoEntities(world, systemContainer.simulator, delta);
             PerformInstructions(world);
         }
 
@@ -48,32 +44,40 @@ namespace Textures.Systems
                 }
 
                 operations.Dispose();
-                textureVersions.Dispose();
             }
         }
 
-        private readonly void LoadDataOntoEntities(World world)
+        private readonly void LoadDataOntoEntities(World world, Simulator simulator, TimeSpan delta)
         {
             ComponentQuery<IsTextureRequest> requestQuery = new(world);
             foreach (var r in requestQuery)
             {
                 ref IsTextureRequest request = ref r.component1;
-                bool sourceChanged;
                 Entity texture = new(world, r.entity);
-                if (!textureVersions.ContainsKey(texture))
+                if (request.status == IsTextureRequest.Status.Submitted)
                 {
-                    sourceChanged = true;
-                }
-                else
-                {
-                    sourceChanged = textureVersions[texture] != request.version;
+                    request.status = IsTextureRequest.Status.Loading;
+                    Trace.WriteLine($"Started searching data for texture `{texture}` with address `{request.address}`");
                 }
 
-                if (sourceChanged)
+                if (request.status == IsTextureRequest.Status.Loading)
                 {
-                    if (TryLoad(texture))
+                    IsTextureRequest dataRequest = request;
+                    if (TryLoadTexture(texture, dataRequest, simulator))
                     {
-                        textureVersions.AddOrSet(texture, request.version);
+                        Trace.WriteLine($"Texture `{texture}` has been loaded");
+
+                        //todo: being done this way because reference to the request may have shifted
+                        world.SetComponent(r.entity, dataRequest.BecomeLoaded());
+                    }
+                    else
+                    {
+                        request.duration += delta;
+                        if (request.duration >= request.timeout)
+                        {
+                            Trace.TraceError($"Texture `{texture}` could not be loaded");
+                            request.status = IsTextureRequest.Status.NotFound;
+                        }
                     }
                 }
             }
@@ -92,58 +96,67 @@ namespace Textures.Systems
         /// Updates the entity with the latest pixel data using the <see cref="byte"/>
         /// collection on it.
         /// </summary>
-        private readonly bool TryLoad(Entity texture)
+        private readonly bool TryLoadTexture(Entity texture, IsTextureRequest request, Simulator simulator)
         {
-            if (!texture.ContainsArray<BinaryData>())
+            HandleDataRequest message = new(texture, request.address);
+            if (simulator.TryHandleMessage(ref message))
+            {
+                if (message.loaded)
+                {
+                    //update pixels collection
+                    Trace.WriteLine($"Loading image data onto entity `{texture}`");
+                    Schema schema = texture.world.Schema;
+                    USpan<byte> binaryData = message.Bytes;
+                    using (Image<Rgba32> image = Image.Load<Rgba32>(binaryData))
+                    {
+                        uint width = (uint)image.Width;
+                        uint height = (uint)image.Height;
+                        uint pixelCount = width * height;
+                        using Array<Pixel> pixels = new(pixelCount);
+                        for (uint p = 0; p < pixelCount; p++)
+                        {
+                            uint x = p % width;
+                            uint y = p / width;
+                            Rgba32 pixel = image[(int)x, (int)(height - y - 1)]; //flip y
+                            pixels[p] = new Pixel(pixel.R, pixel.G, pixel.B, pixel.A);
+                        }
+
+                        //update texture size data
+                        Operation operation = new();
+                        Operation.SelectedEntity selectedEntity = operation.SelectEntity(texture);
+
+                        if (texture.TryGetComponent(out IsTexture component))
+                        {
+                            selectedEntity.SetComponent(component.IncrementVersion(), schema);
+                        }
+                        else
+                        {
+                            selectedEntity.AddComponent(new IsTexture(0, width, height), schema);
+                        }
+
+                        //put list
+                        if (!texture.ContainsArray<Pixel>())
+                        {
+                            selectedEntity.CreateArray(pixels.AsSpan(), schema);
+                        }
+                        else
+                        {
+                            selectedEntity.ResizeArray<Pixel>(pixels.Length, schema);
+                            selectedEntity.SetArrayElements(0, pixels.AsSpan(), schema);
+                        }
+
+                        operations.Push(operation);
+                        return true;
+                    }
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
             {
                 return false;
-            }
-
-            //update pixels collection
-            Trace.WriteLine($"Loading image data onto entity `{texture}`");
-            USpan<byte> bytes = texture.GetArray<BinaryData>().As<byte>();
-            Schema schema = texture.GetWorld().Schema;
-            using (Image<Rgba32> image = Image.Load<Rgba32>(bytes))
-            {
-                uint width = (uint)image.Width;
-                uint height = (uint)image.Height;
-                uint pixelCount = width * height;
-                using Array<Pixel> pixels = new(pixelCount);
-                for (uint p = 0; p < pixelCount; p++)
-                {
-                    uint x = p % width;
-                    uint y = p / width;
-                    Rgba32 pixel = image[(int)x, (int)(height - y - 1)]; //flip y
-                    pixels[p] = new Pixel(pixel.R, pixel.G, pixel.B, pixel.A);
-                }
-
-                //update texture size data
-                Operation operation = new();
-                Operation.SelectedEntity selectedEntity = operation.SelectEntity(texture);
-                ref IsTexture component = ref texture.TryGetComponent<IsTexture>(out bool contains);
-                if (contains)
-                {
-                    selectedEntity.SetComponent(new IsTexture(width, height, component.version + 1), schema);
-                }
-                else
-                {
-                    selectedEntity.AddComponent(new IsTexture(width, height), schema);
-                }
-
-                //put list
-                if (!texture.ContainsArray<Pixel>())
-                {
-                    selectedEntity.CreateArray(pixels.AsSpan(), schema);
-                }
-                else
-                {
-                    selectedEntity.ResizeArray<Pixel>(pixels.Length, schema);
-                    selectedEntity.SetArrayElements(0, pixels.AsSpan(), schema);
-                }
-
-                operations.Push(operation);
-                Trace.WriteLine($"Finished loading image data onto entity `{texture}`");
-                return true;
             }
         }
     }
