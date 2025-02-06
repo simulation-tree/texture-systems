@@ -49,34 +49,42 @@ namespace Textures.Systems
 
         private readonly void LoadDataOntoEntities(World world, Simulator simulator, TimeSpan delta)
         {
-            ComponentQuery<IsTextureRequest> requestQuery = new(world);
-            foreach (var r in requestQuery)
+            ComponentType componentType = world.Schema.GetComponent<IsTextureRequest>();
+            foreach (Chunk chunk in world.Chunks)
             {
-                ref IsTextureRequest request = ref r.component1;
-                Entity texture = new(world, r.entity);
-                if (request.status == IsTextureRequest.Status.Submitted)
+                if (chunk.Definition.Contains(componentType))
                 {
-                    request.status = IsTextureRequest.Status.Loading;
-                    Trace.WriteLine($"Started searching data for texture `{texture}` with address `{request.address}`");
-                }
-
-                if (request.status == IsTextureRequest.Status.Loading)
-                {
-                    IsTextureRequest dataRequest = request;
-                    if (TryLoadTexture(texture, dataRequest, simulator))
+                    USpan<uint> entities = chunk.Entities;
+                    USpan<IsTextureRequest> components = chunk.GetComponents<IsTextureRequest>(componentType);
+                    for (uint i = 0; i < entities.Length; i++)
                     {
-                        Trace.WriteLine($"Texture `{texture}` has been loaded");
-
-                        //todo: being done this way because reference to the request may have shifted
-                        world.SetComponent(r.entity, dataRequest.BecomeLoaded());
-                    }
-                    else
-                    {
-                        request.duration += delta;
-                        if (request.duration >= request.timeout)
+                        ref IsTextureRequest request = ref components[i];
+                        Entity texture = new(world, entities[i]);
+                        if (request.status == IsTextureRequest.Status.Submitted)
                         {
-                            Trace.TraceError($"Texture `{texture}` could not be loaded");
-                            request.status = IsTextureRequest.Status.NotFound;
+                            request.status = IsTextureRequest.Status.Loading;
+                            Trace.WriteLine($"Started searching data for texture `{texture}` with address `{request.address}`");
+                        }
+
+                        if (request.status == IsTextureRequest.Status.Loading)
+                        {
+                            IsTextureRequest dataRequest = request;
+                            if (TryLoadTexture(texture, dataRequest, simulator))
+                            {
+                                Trace.WriteLine($"Texture `{texture}` has been loaded");
+
+                                //todo: being done this way because reference to the request may have shifted
+                                texture.SetComponent(dataRequest.BecomeLoaded());
+                            }
+                            else
+                            {
+                                request.duration += delta;
+                                if (request.duration >= request.timeout)
+                                {
+                                    Trace.TraceError($"Texture `{texture}` could not be loaded");
+                                    request.status = IsTextureRequest.Status.NotFound;
+                                }
+                            }
                         }
                     }
                 }
