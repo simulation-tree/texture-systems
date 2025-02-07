@@ -106,7 +106,7 @@ namespace Textures.Systems
         /// </summary>
         private readonly bool TryLoadTexture(Entity texture, IsTextureRequest request, Simulator simulator)
         {
-            LoadData message = new(texture, request.address);
+            LoadData message = new(texture.world, request.address);
             if (simulator.TryHandleMessage(ref message))
             {
                 if (message.IsLoaded)
