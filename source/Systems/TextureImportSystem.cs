@@ -106,16 +106,18 @@ namespace Textures.Systems
         /// </summary>
         private readonly bool TryLoadTexture(Entity texture, IsTextureRequest request, Simulator simulator)
         {
-            HandleDataRequest message = new(texture, request.address);
+            LoadData message = new(texture, request.address);
             if (simulator.TryHandleMessage(ref message))
             {
-                if (message.loaded)
+                if (message.IsLoaded)
                 {
                     //update pixels collection
                     Trace.WriteLine($"Loading image data onto entity `{texture}`");
-                    USpan<byte> binaryData = message.Bytes;
-                    using (Image<Rgba32> image = Image.Load<Rgba32>(binaryData))
+                    USpan<byte> loadedBytes = message.Bytes;
+                    using (Image<Rgba32> image = Image.Load<Rgba32>(loadedBytes))
                     {
+                        message.Dispose();
+
                         uint width = (uint)image.Width;
                         uint height = (uint)image.Height;
                         uint pixelCount = width * height;
