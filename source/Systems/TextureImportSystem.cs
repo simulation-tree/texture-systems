@@ -95,7 +95,7 @@ namespace Textures.Systems
         {
             while (operations.TryPop(out Operation operation))
             {
-                world.Perform(operation);
+                operation.Perform(world);
                 operation.Dispose();
             }
         }
@@ -113,7 +113,6 @@ namespace Textures.Systems
                 {
                     //update pixels collection
                     Trace.WriteLine($"Loading image data onto entity `{texture}`");
-                    Schema schema = texture.world.Schema;
                     USpan<byte> binaryData = message.Bytes;
                     using (Image<Rgba32> image = Image.Load<Rgba32>(binaryData))
                     {
@@ -131,26 +130,20 @@ namespace Textures.Systems
 
                         //update texture size data
                         Operation operation = new();
-                        Operation.SelectedEntity selectedEntity = operation.SelectEntity(texture);
+                        operation.SelectEntity(texture);
 
-                        if (texture.TryGetComponent(out IsTexture component))
-                        {
-                            selectedEntity.SetComponent(component.IncrementVersion(), schema);
-                        }
-                        else
-                        {
-                            selectedEntity.AddComponent(new IsTexture(0, width, height), schema);
-                        }
+                        texture.TryGetComponent(out IsTexture component);
+                        operation.AddOrSetComponent(new IsTexture(component.version + 1, width, height));
 
                         //put list
                         if (!texture.ContainsArray<Pixel>())
                         {
-                            selectedEntity.CreateArray(pixels.AsSpan(), schema);
+                            operation.CreateArray(pixels.AsSpan());
                         }
                         else
                         {
-                            selectedEntity.ResizeArray<Pixel>(pixels.Length, schema);
-                            selectedEntity.SetArrayElements(0, pixels.AsSpan(), schema);
+                            operation.ResizeArray<Pixel>(pixels.Length);
+                            operation.SetArrayElements(0, pixels.AsSpan());
                         }
 
                         operations.Push(operation);
