@@ -14,10 +14,12 @@ namespace Textures.Systems
     public readonly partial struct TextureImportSystem : ISystem
     {
         private readonly Stack<Operation> operations;
+        private readonly Dictionary<long, LoadedImage> images;
 
         private TextureImportSystem(Stack<Operation> operations)
         {
             this.operations = operations;
+            images = new();
         }
 
         void ISystem.Start(in SystemContainer systemContainer, in World world)
@@ -44,6 +46,13 @@ namespace Textures.Systems
                 }
 
                 operations.Dispose();
+
+                foreach (LoadedImage image in images.Values)
+                {
+                    image.Dispose();
+                }
+
+                images.Dispose();
             }
         }
 
@@ -106,50 +115,36 @@ namespace Textures.Systems
         /// </summary>
         private readonly bool TryLoadTexture(Entity texture, IsTextureRequest request, Simulator simulator)
         {
-            LoadData message = new(texture.world, request.address);
-            if (simulator.TryHandleMessage(ref message))
+            long requestHash = request.address.GetLongHashCode();
+            if (!images.TryGetValue(requestHash, out LoadedImage loadedImage))
             {
-                if (message.IsLoaded)
+                LoadData message = new(texture.world, request.address);
+                if (simulator.TryHandleMessage(ref message))
                 {
-                    //update pixels collection
-                    Trace.WriteLine($"Loading image data onto entity `{texture}`");
-                    USpan<byte> loadedBytes = message.Bytes;
-                    using (Image<Rgba32> image = Image.Load<Rgba32>(loadedBytes))
+                    if (message.IsLoaded)
                     {
+                        //update pixels collection
+                        USpan<byte> loadedBytes = message.Bytes;
+                        using (Image<Rgba32> image = Image.Load<Rgba32>(loadedBytes))
+                        {
+                            uint width = (uint)image.Width;
+                            uint height = (uint)image.Height;
+                            loadedImage = new(width, height);
+                            for (uint p = 0; p < loadedImage.length; p++)
+                            {
+                                uint x = p % width;
+                                uint y = p / width;
+                                Rgba32 pixel = image[(int)x, (int)(height - y - 1)]; //flip y
+                                loadedImage[p] = new Pixel(pixel.R, pixel.G, pixel.B, pixel.A);
+                            }
+                        }
+
                         message.Dispose();
-
-                        uint width = (uint)image.Width;
-                        uint height = (uint)image.Height;
-                        uint pixelCount = width * height;
-                        using Array<Pixel> pixels = new(pixelCount);
-                        for (uint p = 0; p < pixelCount; p++)
-                        {
-                            uint x = p % width;
-                            uint y = p / width;
-                            Rgba32 pixel = image[(int)x, (int)(height - y - 1)]; //flip y
-                            pixels[p] = new Pixel(pixel.R, pixel.G, pixel.B, pixel.A);
-                        }
-
-                        //update texture size data
-                        Operation operation = new();
-                        operation.SelectEntity(texture);
-
-                        texture.TryGetComponent(out IsTexture component);
-                        operation.AddOrSetComponent(new IsTexture(component.version + 1, width, height));
-
-                        //put list
-                        if (!texture.ContainsArray<Pixel>())
-                        {
-                            operation.CreateArray(pixels.AsSpan());
-                        }
-                        else
-                        {
-                            operation.ResizeArray<Pixel>(pixels.Length);
-                            operation.SetArrayElements(0, pixels.AsSpan());
-                        }
-
-                        operations.Push(operation);
-                        return true;
+                        images.Add(requestHash, loadedImage);
+                    }
+                    else
+                    {
+                        return false;
                     }
                 }
                 else
@@ -157,10 +152,17 @@ namespace Textures.Systems
                     return false;
                 }
             }
-            else
-            {
-                return false;
-            }
+
+            Trace.WriteLine($"Loading image data from `{request.address}` onto entity `{texture}`");
+
+            //update texture size data
+            Operation operation = new();
+            operation.SelectEntity(texture);
+            texture.TryGetComponent(out IsTexture component);
+            operation.AddOrSetComponent(new IsTexture(component.version + 1, loadedImage.width, loadedImage.height));
+            operation.CreateOrSetArray(loadedImage.Pixels);
+            operations.Push(operation);
+            return true;
         }
     }
 }
