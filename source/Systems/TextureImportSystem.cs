@@ -115,11 +115,13 @@ namespace Textures.Systems
         /// </summary>
         private readonly bool TryLoadTexture(Entity texture, IsTextureRequest request, Simulator simulator)
         {
+            //todo: implement loading cubemaps
+
             long requestHash = request.address.GetLongHashCode();
             if (!images.TryGetValue(requestHash, out LoadedImage loadedImage))
             {
                 LoadData message = new(texture.world, request.address);
-                if (simulator.TryHandleMessage(ref message))
+                if (simulator.TryHandleMessage(ref message) != default)
                 {
                     if (message.IsLoaded)
                     {
@@ -144,11 +146,13 @@ namespace Textures.Systems
                     }
                     else
                     {
+                        Trace.TraceError($"Texture `{texture}` could not be loaded");
                         return false;
                     }
                 }
                 else
                 {
+                    Trace.TraceError($"Texture `{texture}` could not be loaded, no message handlers");
                     return false;
                 }
             }
