@@ -163,7 +163,7 @@ namespace Textures.Systems
             Operation operation = new();
             operation.SelectEntity(texture);
             texture.TryGetComponent(out IsTexture component);
-            operation.AddOrSetComponent(new IsTexture(component.version + 1, loadedImage.width, loadedImage.height));
+            operation.AddOrSetComponent(component.IncrementVersion(loadedImage.width, loadedImage.height));
             operation.CreateOrSetArray(loadedImage.Pixels);
             operations.Push(operation);
             return true;
