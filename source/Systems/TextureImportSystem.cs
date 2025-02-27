@@ -58,10 +58,10 @@ namespace Textures.Systems
 
         private readonly void LoadDataOntoEntities(World world, Simulator simulator, TimeSpan delta)
         {
-            ComponentType componentType = world.Schema.GetComponent<IsTextureRequest>();
+            ComponentType componentType = world.Schema.GetComponentType<IsTextureRequest>();
             foreach (Chunk chunk in world.Chunks)
             {
-                if (chunk.Definition.Contains(componentType))
+                if (chunk.Definition.ContainsComponent(componentType))
                 {
                     USpan<uint> entities = chunk.Entities;
                     USpan<IsTextureRequest> components = chunk.GetComponents<IsTextureRequest>(componentType);
