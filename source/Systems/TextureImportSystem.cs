@@ -63,9 +63,9 @@ namespace Textures.Systems
             {
                 if (chunk.Definition.ContainsComponent(componentType))
                 {
-                    USpan<uint> entities = chunk.Entities;
-                    USpan<IsTextureRequest> components = chunk.GetComponents<IsTextureRequest>(componentType);
-                    for (uint i = 0; i < entities.Length; i++)
+                    ReadOnlySpan<uint> entities = chunk.Entities;
+                    Span<IsTextureRequest> components = chunk.GetComponents<IsTextureRequest>(componentType);
+                    for (int i = 0; i < entities.Length; i++)
                     {
                         ref IsTextureRequest request = ref components[i];
                         Entity texture = new(world, entities[i]);
@@ -126,17 +126,17 @@ namespace Textures.Systems
                     if (message.IsLoaded)
                     {
                         //update pixels collection
-                        USpan<byte> loadedBytes = message.Bytes;
+                        Span<byte> loadedBytes = message.Bytes;
                         using (Image<Rgba32> image = Image.Load<Rgba32>(loadedBytes))
                         {
-                            uint width = (uint)image.Width;
-                            uint height = (uint)image.Height;
+                            int width = image.Width;
+                            int height = image.Height;
                             loadedImage = new(width, height);
-                            for (uint p = 0; p < loadedImage.length; p++)
+                            for (int p = 0; p < loadedImage.length; p++)
                             {
-                                uint x = p % width;
-                                uint y = p / width;
-                                Rgba32 pixel = image[(int)x, (int)(height - y - 1)]; //flip y
+                                int x = p % width;
+                                int y = p / width;
+                                Rgba32 pixel = image[x, height - y - 1]; //flip y
                                 loadedImage[p] = new Pixel(pixel.R, pixel.G, pixel.B, pixel.A);
                             }
                         }

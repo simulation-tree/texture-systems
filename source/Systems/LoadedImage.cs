@@ -1,21 +1,20 @@
 ﻿using Collections.Generic;
 using System;
-using Unmanaged;
 
 namespace Textures.Systems
 {
     public readonly struct LoadedImage : IDisposable
     {
-        public readonly uint width;
-        public readonly uint height;
-        public readonly uint length;
+        public readonly int width;
+        public readonly int height;
+        public readonly int length;
         private readonly Array<Pixel> pixels;
 
-        public readonly USpan<Pixel> Pixels => pixels.AsSpan();
+        public readonly Span<Pixel> Pixels => pixels.AsSpan();
 
-        public readonly ref Pixel this[uint index] => ref pixels[index];
+        public readonly ref Pixel this[int index] => ref pixels[index];
 
-        public LoadedImage(uint width, uint height)
+        public LoadedImage(int width, int height)
         {
             this.width = width;
             this.height = height;
@@ -28,7 +27,7 @@ namespace Textures.Systems
             pixels.Dispose();
         }
 
-        public readonly ref Pixel GetAt(uint x, uint y)
+        public readonly ref Pixel GetAt(int x, int y)
         {
             return ref pixels[(y * width) + x];
         }
