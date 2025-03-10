@@ -123,11 +123,10 @@ namespace Textures.Systems
                 LoadData message = new(texture.world, request.address);
                 if (simulator.TryHandleMessage(ref message) != default)
                 {
-                    if (message.IsLoaded)
+                    if (message.TryGetBytes(out ReadOnlySpan<byte> data))
                     {
                         //update pixels collection
-                        Span<byte> loadedBytes = message.Bytes;
-                        using (Image<Rgba32> image = Image.Load<Rgba32>(loadedBytes))
+                        using (Image<Rgba32> image = Image.Load<Rgba32>(data))
                         {
                             int width = image.Width;
                             int height = image.Height;
