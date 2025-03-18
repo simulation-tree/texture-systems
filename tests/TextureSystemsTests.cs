@@ -18,8 +18,8 @@ namespace Textures.Tests
         protected override void SetUp()
         {
             base.SetUp();
-            simulator.AddSystem<DataImportSystem>();
-            simulator.AddSystem<TextureImportSystem>();
+            simulator.AddSystem(new DataImportSystem());
+            simulator.AddSystem(new TextureImportSystem());
         }
 
         protected override Schema CreateSchema()

@@ -16,55 +16,52 @@ namespace Textures.Systems
         private readonly Stack<Operation> operations;
         private readonly Dictionary<long, LoadedImage> images;
 
-        private TextureImportSystem(Stack<Operation> operations)
+        public TextureImportSystem()
         {
-            this.operations = operations;
+            operations = new();
             images = new();
         }
 
-        void ISystem.Start(in SystemContainer systemContainer, in World world)
+        public readonly void Dispose()
         {
-            if (systemContainer.World == world)
+            while (operations.TryPop(out Operation operation))
             {
-                systemContainer.Write(new TextureImportSystem(new()));
+                operation.Dispose();
             }
+
+            operations.Dispose();
+
+            foreach (LoadedImage loadedImage in images.Values)
+            {
+                loadedImage.Dispose();
+            }
+
+            images.Dispose();
         }
 
-        void ISystem.Update(in SystemContainer systemContainer, in World world, in TimeSpan delta)
+        void ISystem.Start(in SystemContext context, in World world)
         {
-            LoadDataOntoEntities(world, systemContainer.simulator, delta);
+        }
+
+        void ISystem.Update(in SystemContext context, in World world, in TimeSpan delta)
+        {
+            LoadDataOntoEntities(world, context, delta);
             PerformInstructions(world);
         }
 
-        void ISystem.Finish(in SystemContainer systemContainer, in World world)
+        void ISystem.Finish(in SystemContext context, in World world)
         {
-            if (systemContainer.World == world)
-            {
-                while (operations.TryPop(out Operation operation))
-                {
-                    operation.Dispose();
-                }
-
-                operations.Dispose();
-
-                foreach (LoadedImage image in images.Values)
-                {
-                    image.Dispose();
-                }
-
-                images.Dispose();
-            }
         }
 
-        private readonly void LoadDataOntoEntities(World world, Simulator simulator, TimeSpan delta)
+        private readonly void LoadDataOntoEntities(World world, SystemContext context, TimeSpan delta)
         {
-            ComponentType componentType = world.Schema.GetComponentType<IsTextureRequest>();
+            int componentType = world.Schema.GetComponentType<IsTextureRequest>();
             foreach (Chunk chunk in world.Chunks)
             {
                 if (chunk.Definition.ContainsComponent(componentType))
                 {
                     ReadOnlySpan<uint> entities = chunk.Entities;
-                    Span<IsTextureRequest> components = chunk.GetComponents<IsTextureRequest>(componentType);
+                    ComponentEnumerator<IsTextureRequest> components = chunk.GetComponents<IsTextureRequest>(componentType);
                     for (int i = 0; i < entities.Length; i++)
                     {
                         ref IsTextureRequest request = ref components[i];
@@ -78,7 +75,7 @@ namespace Textures.Systems
                         if (request.status == IsTextureRequest.Status.Loading)
                         {
                             IsTextureRequest dataRequest = request;
-                            if (TryLoadTexture(texture, dataRequest, simulator))
+                            if (TryLoadTexture(texture, dataRequest, context))
                             {
                                 Trace.WriteLine($"Texture `{texture}` has been loaded");
 
@@ -113,7 +110,7 @@ namespace Textures.Systems
         /// Updates the entity with the latest pixel data using the <see cref="byte"/>
         /// collection on it.
         /// </summary>
-        private readonly bool TryLoadTexture(Entity texture, IsTextureRequest request, Simulator simulator)
+        private readonly bool TryLoadTexture(Entity texture, IsTextureRequest request, SystemContext context)
         {
             //todo: implement loading cubemaps
 
@@ -121,7 +118,7 @@ namespace Textures.Systems
             if (!images.TryGetValue(requestHash, out LoadedImage loadedImage))
             {
                 LoadData message = new(texture.world, request.address);
-                if (simulator.TryHandleMessage(ref message) != default)
+                if (context.TryHandleMessage(ref message) != default)
                 {
                     if (message.TryGetBytes(out ReadOnlySpan<byte> data))
                     {
