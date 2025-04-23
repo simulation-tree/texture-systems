@@ -11,8 +11,8 @@ namespace Textures.Tests
     {
         static TextureSystemsTests()
         {
-            MetadataRegistry.Load<DataTypeBank>();
-            MetadataRegistry.Load<TexturesTypeBank>();
+            MetadataRegistry.Load<DataMetadataBank>();
+            MetadataRegistry.Load<TexturesMetadataBank>();
         }
 
         protected override void SetUp()
