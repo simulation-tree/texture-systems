@@ -120,10 +120,10 @@ namespace Textures.Systems
                 LoadData message = new(texture.world, request.address);
                 if (context.TryHandleMessage(ref message) != default)
                 {
-                    if (message.TryGetBytes(out ReadOnlySpan<byte> data))
+                    if (message.TryConsume(out ByteReader data))
                     {
                         //update pixels collection
-                        using (Image<Rgba32> image = Image.Load<Rgba32>(data))
+                        using (Image<Rgba32> image = Image.Load<Rgba32>(data.GetBytes()))
                         {
                             int width = image.Width;
                             int height = image.Height;
@@ -137,7 +137,7 @@ namespace Textures.Systems
                             }
                         }
 
-                        message.Dispose();
+                        data.Dispose();
                         images.Add(requestHash, loadedImage);
                     }
                     else
