@@ -74,13 +74,10 @@ namespace Textures.Systems
 
                         if (request.status == IsTextureRequest.Status.Loading)
                         {
-                            IsTextureRequest dataRequest = request;
-                            if (TryLoadTexture(texture, dataRequest, context))
+                            if (TryLoadTexture(texture, request, context))
                             {
                                 Trace.WriteLine($"Texture `{texture}` has been loaded");
-
-                                //todo: being done this way because reference to the request may have shifted
-                                texture.SetComponent(dataRequest.BecomeLoaded());
+                                request.status = IsTextureRequest.Status.Loaded;
                             }
                             else
                             {
