@@ -18,14 +18,14 @@ namespace Textures.Tests
         protected override void SetUp()
         {
             base.SetUp();
-            simulator.Add(new DataImportSystem());
-            simulator.Add(new TextureImportSystem());
+            Simulator.Add(new DataImportSystem());
+            Simulator.Add(new TextureImportSystem());
         }
 
         protected override void TearDown()
         {
-            simulator.Remove<TextureImportSystem>();
-            simulator.Remove<DataImportSystem>();
+            Simulator.Remove<TextureImportSystem>();
+            Simulator.Remove<DataImportSystem>();
             base.TearDown();
         }
 
