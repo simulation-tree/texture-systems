@@ -11,7 +11,7 @@ using Worlds;
 
 namespace Textures.Systems
 {
-    public readonly partial struct TextureImportSystem : ISystem
+    public partial class TextureImportSystem : ISystem, IDisposable
     {
         private readonly Stack<Operation> operations;
         private readonly Dictionary<long, LoadedImage> images;
@@ -22,7 +22,7 @@ namespace Textures.Systems
             images = new();
         }
 
-        public readonly void Dispose()
+        public void Dispose()
         {
             while (operations.TryPop(out Operation operation))
             {
@@ -39,22 +39,15 @@ namespace Textures.Systems
             images.Dispose();
         }
 
-        void ISystem.Start(in SystemContext context, in World world)
+        void ISystem.Update(Simulator simulator, double deltaTime)
         {
+            LoadDataOntoEntities(simulator, deltaTime);
+            PerformInstructions(simulator.world);
         }
 
-        void ISystem.Update(in SystemContext context, in World world, in TimeSpan delta)
+        private void LoadDataOntoEntities(Simulator simulator, double delta)
         {
-            LoadDataOntoEntities(world, context, delta);
-            PerformInstructions(world);
-        }
-
-        void ISystem.Finish(in SystemContext context, in World world)
-        {
-        }
-
-        private readonly void LoadDataOntoEntities(World world, SystemContext context, TimeSpan delta)
-        {
+            World world = simulator.world;
             int componentType = world.Schema.GetComponentType<IsTextureRequest>();
             foreach (Chunk chunk in world.Chunks)
             {
@@ -74,7 +67,7 @@ namespace Textures.Systems
 
                         if (request.status == IsTextureRequest.Status.Loading)
                         {
-                            if (TryLoadTexture(texture, request, context))
+                            if (TryLoadTexture(texture, request, simulator))
                             {
                                 Trace.WriteLine($"Texture `{texture}` has been loaded");
                                 request.status = IsTextureRequest.Status.Loaded;
@@ -94,7 +87,7 @@ namespace Textures.Systems
             }
         }
 
-        private readonly void PerformInstructions(World world)
+        private void PerformInstructions(World world)
         {
             while (operations.TryPop(out Operation operation))
             {
@@ -107,7 +100,7 @@ namespace Textures.Systems
         /// Updates the entity with the latest pixel data using the <see cref="byte"/>
         /// collection on it.
         /// </summary>
-        private readonly bool TryLoadTexture(Entity texture, IsTextureRequest request, SystemContext context)
+        private bool TryLoadTexture(Entity texture, IsTextureRequest request, Simulator simulator)
         {
             //todo: implement loading cubemaps
 
@@ -115,39 +108,37 @@ namespace Textures.Systems
             if (!images.TryGetValue(requestHash, out LoadedImage loadedImage))
             {
                 LoadData message = new(texture.world, request.address);
-                if (context.TryHandleMessage(ref message) != default)
+                simulator.Broadcast(ref message);
+                if (message.TryConsume(out ByteReader data))
                 {
-                    if (message.TryConsume(out ByteReader data))
+                    //update pixels collection
+                    using (Image<Rgba32> image = Image.Load<Rgba32>(data.GetBytes()))
                     {
-                        //update pixels collection
-                        using (Image<Rgba32> image = Image.Load<Rgba32>(data.GetBytes()))
+                        int width = image.Width;
+                        int height = image.Height;
+                        loadedImage = new(width, height);
+                        for (int p = 0; p < loadedImage.length; p++)
                         {
-                            int width = image.Width;
-                            int height = image.Height;
-                            loadedImage = new(width, height);
-                            for (int p = 0; p < loadedImage.length; p++)
-                            {
-                                int x = p % width;
-                                int y = p / width;
-                                Rgba32 pixel = image[x, height - y - 1]; //flip y
-                                loadedImage[p] = new Pixel(pixel.R, pixel.G, pixel.B, pixel.A);
-                            }
+                            int x = p % width;
+                            int y = p / width;
+                            Rgba32 pixel = image[x, height - y - 1]; //flip y
+                            loadedImage[p] = new Pixel(pixel.R, pixel.G, pixel.B, pixel.A);
                         }
+                    }
 
-                        data.Dispose();
-                        images.Add(requestHash, loadedImage);
-                    }
-                    else
-                    {
-                        Trace.TraceError($"Texture `{texture}` could not be loaded");
-                        return false;
-                    }
+                    data.Dispose();
+                    images.Add(requestHash, loadedImage);
                 }
                 else
                 {
-                    Trace.TraceError($"Texture `{texture}` could not be loaded, no message handlers");
+                    Trace.TraceError($"Texture `{texture}` could not be loaded");
                     return false;
                 }
+            }
+            else
+            {
+                Trace.TraceError($"Texture `{texture}` could not be loaded, no message handlers");
+                return false;
             }
 
             Trace.WriteLine($"Loading image data from `{request.address}` onto entity `{texture}`");
