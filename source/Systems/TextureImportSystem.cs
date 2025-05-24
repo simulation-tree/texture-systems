@@ -13,23 +13,24 @@ namespace Textures.Systems
 {
     public partial class TextureImportSystem : ISystem, IDisposable
     {
-        private readonly Stack<Operation> operations;
+        private readonly Operation operation;
         private readonly Dictionary<long, LoadedImage> images;
+        private readonly int requestType;
+        private readonly int textureType;
 
-        public TextureImportSystem()
+        public TextureImportSystem(Simulator simulator)
         {
-            operations = new();
+            operation = new();
             images = new();
+
+            Schema schema = simulator.world.Schema;
+            requestType = schema.GetComponentType<IsTextureRequest>();
+            textureType = schema.GetComponentType<IsTexture>();
         }
 
         public void Dispose()
         {
-            while (operations.TryPop(out Operation operation))
-            {
-                operation.Dispose();
-            }
-
-            operations.Dispose();
+            operation.Dispose();
 
             foreach (LoadedImage loadedImage in images.Values)
             {
@@ -42,19 +43,22 @@ namespace Textures.Systems
         void ISystem.Update(Simulator simulator, double deltaTime)
         {
             LoadDataOntoEntities(simulator, deltaTime);
-            PerformInstructions(simulator.world);
+            if (operation.Count > 0)
+            {
+                operation.Perform(simulator.world);
+                operation.Reset();
+            }
         }
 
         private void LoadDataOntoEntities(Simulator simulator, double delta)
         {
             World world = simulator.world;
-            int componentType = world.Schema.GetComponentType<IsTextureRequest>();
             foreach (Chunk chunk in world.Chunks)
             {
-                if (chunk.Definition.ContainsComponent(componentType))
+                if (chunk.Definition.ContainsComponent(requestType))
                 {
                     ReadOnlySpan<uint> entities = chunk.Entities;
-                    ComponentEnumerator<IsTextureRequest> components = chunk.GetComponents<IsTextureRequest>(componentType);
+                    ComponentEnumerator<IsTextureRequest> components = chunk.GetComponents<IsTextureRequest>(requestType);
                     for (int i = 0; i < entities.Length; i++)
                     {
                         ref IsTextureRequest request = ref components[i];
@@ -84,15 +88,6 @@ namespace Textures.Systems
                         }
                     }
                 }
-            }
-        }
-
-        private void PerformInstructions(World world)
-        {
-            while (operations.TryPop(out Operation operation))
-            {
-                operation.Perform(world);
-                operation.Dispose();
             }
         }
 
@@ -144,15 +139,13 @@ namespace Textures.Systems
             Trace.WriteLine($"Loading image data from `{request.address}` onto entity `{texture}`");
 
             //update texture size data
-            Operation operation = new();
-            operation.SelectEntity(texture);
-            texture.TryGetComponent(out IsTexture component);
+            operation.SetSelectedEntity(texture);
+            texture.TryGetComponent(textureType, out IsTexture component);
             component.width = loadedImage.width;
             component.height = loadedImage.height;
             component.version++;
             operation.AddOrSetComponent(component);
             operation.CreateOrSetArray(loadedImage.Pixels);
-            operations.Push(operation);
             return true;
         }
     }
