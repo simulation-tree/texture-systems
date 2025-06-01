@@ -23,7 +23,7 @@ namespace Textures.Tests
             DataSource testTextureFile = new(world, "testTexture", texturePngData);
             Texture texture = new(world, "testTexture");
 
-            await texture.UntilCompliant(Simulator.Update, cancellation);
+            await texture.UntilCompliant(Update, cancellation);
 
             Assert.That(texture.IsLoaded, Is.True);
             Assert.That(texture.Width, Is.EqualTo(16));

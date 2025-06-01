@@ -11,28 +11,32 @@ using Worlds;
 
 namespace Textures.Systems
 {
-    public partial class TextureImportSystem : ISystem, IDisposable
+    public partial class TextureImportSystem : SystemBase, IListener<DataUpdate>
     {
+        private readonly World world;
         private readonly Operation operation;
-        private readonly Dictionary<long, LoadedImage> images;
+        private readonly Dictionary<long, CompiledImage> images;
         private readonly int requestType;
         private readonly int textureType;
+        private readonly int pixelArrayType;
 
-        public TextureImportSystem(Simulator simulator)
+        public TextureImportSystem(Simulator simulator, World world) : base(simulator)
         {
-            operation = new();
+            this.world = world;
+            operation = new(world);
             images = new();
 
-            Schema schema = simulator.world.Schema;
+            Schema schema = world.Schema;
             requestType = schema.GetComponentType<IsTextureRequest>();
             textureType = schema.GetComponentType<IsTexture>();
+            pixelArrayType = schema.GetArrayType<Pixel>();
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             operation.Dispose();
 
-            foreach (LoadedImage loadedImage in images.Values)
+            foreach (CompiledImage loadedImage in images.Values)
             {
                 loadedImage.Dispose();
             }
@@ -40,21 +44,21 @@ namespace Textures.Systems
             images.Dispose();
         }
 
-        void ISystem.Update(Simulator simulator, double deltaTime)
+        void IListener<DataUpdate>.Receive(ref DataUpdate message)
         {
-            LoadDataOntoEntities(simulator, deltaTime);
-            if (operation.Count > 0)
+            LoadDataOntoEntities(message.deltaTime);
+            if (operation.TryPerform())
             {
-                operation.Perform(simulator.world);
                 operation.Reset();
             }
         }
 
-        private void LoadDataOntoEntities(Simulator simulator, double delta)
+        private void LoadDataOntoEntities(double deltaTime)
         {
-            World world = simulator.world;
-            foreach (Chunk chunk in world.Chunks)
+            ReadOnlySpan<Chunk> chunks = world.Chunks;
+            for (int c = 0; c < chunks.Length; c++)
             {
+                Chunk chunk = chunks[c];
                 if (chunk.Definition.ContainsComponent(requestType))
                 {
                     ReadOnlySpan<uint> entities = chunk.Entities;
@@ -62,7 +66,7 @@ namespace Textures.Systems
                     for (int i = 0; i < entities.Length; i++)
                     {
                         ref IsTextureRequest request = ref components[i];
-                        Entity texture = new(world, entities[i]);
+                        uint texture = entities[i];
                         if (request.status == IsTextureRequest.Status.Submitted)
                         {
                             request.status = IsTextureRequest.Status.Loading;
@@ -71,14 +75,14 @@ namespace Textures.Systems
 
                         if (request.status == IsTextureRequest.Status.Loading)
                         {
-                            if (TryLoadTexture(texture, request, simulator))
+                            if (TryLoadTexture(texture, request))
                             {
                                 Trace.WriteLine($"Texture `{texture}` has been loaded");
                                 request.status = IsTextureRequest.Status.Loaded;
                             }
                             else
                             {
-                                request.duration += delta;
+                                request.duration += deltaTime;
                                 if (request.duration >= request.timeout)
                                 {
                                     Trace.TraceError($"Texture `{texture}` could not be loaded");
@@ -95,14 +99,14 @@ namespace Textures.Systems
         /// Updates the entity with the latest pixel data using the <see cref="byte"/>
         /// collection on it.
         /// </summary>
-        private bool TryLoadTexture(Entity texture, IsTextureRequest request, Simulator simulator)
+        private bool TryLoadTexture(uint textureEntity, IsTextureRequest request)
         {
             //todo: implement loading cubemaps
 
             long requestHash = request.address.GetLongHashCode();
-            if (!images.TryGetValue(requestHash, out LoadedImage loadedImage))
+            if (!images.TryGetValue(requestHash, out CompiledImage compiledImage))
             {
-                LoadData message = new(texture.world, request.address);
+                LoadData message = new(request.address);
                 simulator.Broadcast(ref message);
                 if (message.TryConsume(out ByteReader data))
                 {
@@ -111,41 +115,42 @@ namespace Textures.Systems
                     {
                         int width = image.Width;
                         int height = image.Height;
-                        loadedImage = new(width, height);
-                        for (int p = 0; p < loadedImage.length; p++)
+                        compiledImage = new(width, height);
+                        Span<Pixel> pixels = compiledImage.Pixels;
+                        for (int p = 0; p < compiledImage.length; p++)
                         {
                             int x = p % width;
                             int y = p / width;
                             Rgba32 pixel = image[x, height - y - 1]; //flip y
-                            loadedImage[p] = new Pixel(pixel.R, pixel.G, pixel.B, pixel.A);
+                            pixels[p] = new Pixel(pixel.R, pixel.G, pixel.B, pixel.A);
                         }
                     }
 
                     data.Dispose();
-                    images.Add(requestHash, loadedImage);
+                    images.Add(requestHash, compiledImage);
                 }
                 else
                 {
-                    Trace.TraceError($"Texture `{texture}` could not be loaded");
+                    Trace.TraceError($"Texture `{textureEntity}` could not be loaded");
                     return false;
                 }
             }
             else
             {
-                Trace.TraceError($"Texture `{texture}` could not be loaded, no message handlers");
+                Trace.TraceError($"Texture `{textureEntity}` could not be loaded, no message handlers");
                 return false;
             }
 
-            Trace.WriteLine($"Loading image data from `{request.address}` onto entity `{texture}`");
+            Trace.WriteLine($"Loading image data from `{request.address}` onto entity `{textureEntity}`");
 
             //update texture size data
-            operation.SetSelectedEntity(texture);
-            texture.TryGetComponent(textureType, out IsTexture component);
-            component.width = loadedImage.width;
-            component.height = loadedImage.height;
-            component.version++;
-            operation.AddOrSetComponent(component);
-            operation.CreateOrSetArray(loadedImage.Pixels);
+            operation.SetSelectedEntity(textureEntity);
+            world.TryGetComponent(textureEntity, textureType, out IsTexture texture);
+            texture.width = compiledImage.width;
+            texture.height = compiledImage.height;
+            texture.version++;
+            operation.AddOrSetComponent(texture, textureType);
+            operation.CreateOrSetArray(compiledImage.Pixels, pixelArrayType);
             return true;
         }
     }

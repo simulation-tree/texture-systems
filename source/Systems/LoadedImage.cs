@@ -3,7 +3,7 @@ using System;
 
 namespace Textures.Systems
 {
-    public readonly struct LoadedImage : IDisposable
+    public readonly struct CompiledImage : IDisposable
     {
         public readonly int width;
         public readonly int height;
@@ -14,7 +14,7 @@ namespace Textures.Systems
 
         public readonly ref Pixel this[int index] => ref pixels[index];
 
-        public LoadedImage(int width, int height)
+        public CompiledImage(int width, int height)
         {
             this.width = width;
             this.height = height;

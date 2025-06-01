@@ -1,4 +1,5 @@
 ﻿using Data;
+using Data.Messages;
 using Data.Systems;
 using Simulation.Tests;
 using Textures.Systems;
@@ -9,6 +10,8 @@ namespace Textures.Tests
 {
     public abstract class TextureSystemsTests : SimulationTests
     {
+        public World world;
+
         static TextureSystemsTests()
         {
             MetadataRegistry.Load<DataMetadataBank>();
@@ -18,23 +21,25 @@ namespace Textures.Tests
         protected override void SetUp()
         {
             base.SetUp();
-            Simulator.Add(new DataImportSystem(Simulator));
-            Simulator.Add(new TextureImportSystem(Simulator));
+            Schema schema = new();
+            schema.Load<DataSchemaBank>();
+            schema.Load<TexturesSchemaBank>();
+            world = new(schema);
+            Simulator.Add(new DataImportSystem(Simulator, world));
+            Simulator.Add(new TextureImportSystem(Simulator, world));
         }
 
         protected override void TearDown()
         {
             Simulator.Remove<TextureImportSystem>();
             Simulator.Remove<DataImportSystem>();
+            world.Dispose();
             base.TearDown();
         }
 
-        protected override Schema CreateSchema()
+        protected override void Update(double deltaTime)
         {
-            Schema schema = base.CreateSchema();
-            schema.Load<DataSchemaBank>();
-            schema.Load<TexturesSchemaBank>();
-            return schema;
+            Simulator.Broadcast(new DataUpdate(deltaTime));
         }
     }
 }
