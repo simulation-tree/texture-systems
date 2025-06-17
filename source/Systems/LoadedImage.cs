@@ -12,8 +12,6 @@ namespace Textures.Systems
 
         public readonly Span<Pixel> Pixels => pixels.AsSpan();
 
-        public readonly ref Pixel this[int index] => ref pixels[index];
-
         public CompiledImage(int width, int height)
         {
             this.width = width;
@@ -25,11 +23,6 @@ namespace Textures.Systems
         public readonly void Dispose()
         {
             pixels.Dispose();
-        }
-
-        public readonly ref Pixel GetAt(int x, int y)
-        {
-            return ref pixels[(y * width) + x];
         }
     }
 }

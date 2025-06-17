@@ -104,7 +104,8 @@ namespace Textures.Systems
             //todo: implement loading cubemaps
 
             long requestHash = request.address.GetLongHashCode();
-            if (!images.TryGetValue(requestHash, out CompiledImage compiledImage))
+            ref CompiledImage compiledImage = ref images.TryGetValue(requestHash, out bool contains);
+            if (!contains)
             {
                 LoadData message = new(request.address);
                 simulator.Broadcast(ref message);
@@ -115,19 +116,30 @@ namespace Textures.Systems
                     {
                         int width = image.Width;
                         int height = image.Height;
+                        compiledImage = ref images.Add(requestHash);
                         compiledImage = new(width, height);
                         Span<Pixel> pixels = compiledImage.Pixels;
-                        for (int p = 0; p < compiledImage.length; p++)
+                        if ((request.flags & IsTextureRequest.Flags.FlipY) != 0)
                         {
-                            int x = p % width;
-                            int y = p / width;
-                            Rgba32 pixel = image[x, height - y - 1]; //flip y
-                            pixels[p] = new Pixel(pixel.R, pixel.G, pixel.B, pixel.A);
+                            for (int p = 0; p < compiledImage.length; p++)
+                            {
+                                Texture.GetPosition(p, width, out int x, out int y);
+                                Rgba32 pixel = image[x, height - y - 1]; //flip y
+                                pixels[p] = new Pixel(pixel.R, pixel.G, pixel.B, pixel.A);
+                            }
+                        }
+                        else
+                        {
+                            for (int p = 0; p < compiledImage.length; p++)
+                            {
+                                Texture.GetPosition(p, width, out int x, out int y);
+                                Rgba32 pixel = image[x, y];
+                                pixels[p] = new Pixel(pixel.R, pixel.G, pixel.B, pixel.A);
+                            }
                         }
                     }
 
                     data.Dispose();
-                    images.Add(requestHash, compiledImage);
                 }
                 else
                 {
