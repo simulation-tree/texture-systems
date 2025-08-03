@@ -147,11 +147,6 @@ namespace Textures.Systems
                     return false;
                 }
             }
-            else
-            {
-                Trace.TraceError($"Texture `{textureEntity}` could not be loaded, no message handlers");
-                return false;
-            }
 
             Trace.WriteLine($"Loading image data from `{request.address}` onto entity `{textureEntity}`");
 
