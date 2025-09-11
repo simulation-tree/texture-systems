@@ -28,19 +28,12 @@ jobs:
         with:
           path: ${{ github.event.repository.name }}
             
-      - name: Checkout `worlds`
+      - name: Checkout `data`
         uses: actions/checkout@v4.1.2
         with:
-          repository: simulation-tree/worlds
+          repository: simulation-tree/data
           token: ${{ secrets.PAT }}
-          path: worlds
-      
-      - name: Checkout `textures`
-        uses: actions/checkout@v4.1.2
-        with:
-          repository: simulation-tree/textures
-          token: ${{ secrets.PAT }}
-          path: textures
+          path: data
       
       - name: Checkout `simulation`
         uses: actions/checkout@v4.1.2
@@ -49,12 +42,19 @@ jobs:
           token: ${{ secrets.PAT }}
           path: simulation
       
-      - name: Checkout `data`
+      - name: Checkout `textures`
         uses: actions/checkout@v4.1.2
         with:
-          repository: simulation-tree/data
+          repository: simulation-tree/textures
           token: ${{ secrets.PAT }}
-          path: data
+          path: textures
+      
+      - name: Checkout `worlds`
+        uses: actions/checkout@v4.1.2
+        with:
+          repository: simulation-tree/worlds
+          token: ${{ secrets.PAT }}
+          path: worlds
       
       - name: Checkout `unmanaged`
         uses: actions/checkout@v4.1.2
@@ -62,6 +62,13 @@ jobs:
           repository: simulation-tree/unmanaged
           token: ${{ secrets.PAT }}
           path: unmanaged
+      
+      - name: Checkout `types`
+        uses: actions/checkout@v4.1.2
+        with:
+          repository: simulation-tree/types
+          token: ${{ secrets.PAT }}
+          path: types
       
       - name: Checkout `data-systems`
         uses: actions/checkout@v4.1.2
@@ -77,13 +84,6 @@ jobs:
           token: ${{ secrets.PAT }}
           path: collections
       
-      - name: Checkout `types`
-        uses: actions/checkout@v4.1.2
-        with:
-          repository: simulation-tree/types
-          token: ${{ secrets.PAT }}
-          path: types
-      
       - name: Checkout `bin-packer`
         uses: actions/checkout@v4.1.2
         with:
@@ -94,7 +94,7 @@ jobs:
       - name: Setup
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 9.0.x
             
       - name: Test
         run: dotnet test "${{ github.event.repository.name }}/tests" -c Debug --logger "trx"
