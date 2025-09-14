@@ -17,6 +17,7 @@
     <OutDir>bin/$(TargetFramework)/$(Configuration)</OutDir>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageId>SimulationTree.Textures.Systems</PackageId>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
