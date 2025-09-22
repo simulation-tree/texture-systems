@@ -59,7 +59,7 @@ namespace Textures.Systems
             for (int c = 0; c < chunks.Length; c++)
             {
                 Chunk chunk = chunks[c];
-                if (chunk.componentTypes.Contains(requestType))
+                if (chunk.ComponentTypes.Contains(requestType))
                 {
                     ReadOnlySpan<uint> entities = chunk.Entities;
                     ComponentEnumerator<IsTextureRequest> components = chunk.GetComponents<IsTextureRequest>(requestType);
